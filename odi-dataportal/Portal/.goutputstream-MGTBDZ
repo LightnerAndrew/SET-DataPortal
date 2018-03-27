@@ -1,0 +1,97 @@
+from bokeh.core.properties import value
+from bokeh.io import curdoc
+from bokeh.models import ColumnDataSource, CustomJS, Slider, Button, FactorRange, TextInput, HoverTool, DataTable, TableColumn
+from bokeh.plotting import figure
+from bokeh.transform import factor_cmap
+from bokeh.transform import dodge
+from bokeh.palettes import all_palettes
+from bokeh.layouts import layout, widgetbox, row, column
+from os.path import dirname, join
+import pandas as pd
+
+
+##############################################################
+########### Generate Download Table For Horiz LP Chart  ######
+##############################################################
+
+
+# Access dataset from quilt - stored internally
+from quilt.data.lightnera1 import ODI_90to13 as ODI
+
+# Transform quilt data.Node into DataFrame()
+df_horizLPA = ODI.ODI_90to13full()
+
+# Choose the palette for the visual 
+palette_horizLP = all_palettes['Viridis'][8]
+
+df_horizLPA = df_horizLPA.rename(index=str, columns={"cngLP_ag": "Agriculture",
+                              "cngLP_mining": "Mining",
+                              "cngLP_manu": "Manufacturing",
+                              "cngLP_retail": "Retail",
+                              "cngLP_other": "Other",
+                              "cngLP_trans": "Transportation",
+                              "cngLP_constr": "Construction",
+                              "cngLP_all": "Total"
+                             })
+
+
+source_data = ColumnDataSource(data=dict())
+
+def update_table_LP():
+
+	selected = df_horizLPA[
+		(df_horizLPA.year >= min_year_horizLP.value) & 
+		(df_horizLPA.year <= max_year_horizLP.value)
+	]
+	country_val = Country.value.strip()
+	if (country_val != ""):
+		selected = selected[selected.countryname.str.contains(country_val)==True]
+	# round to five decimal points behind the . 
+	selected = selected.round(5)
+	# grab only relevant vars
+	filter_col = [col for col in selected if col.startswith(('LP_within', 'LP_btw', 'year', 'countryname', 'Agriculture', 'Construction', "Manufacturing", "Mining",  "Other", "Retail", "Transportation"))]
+	selected = selected[filter_col]
+	# drop all na's so that the js will work 
+	selected = selected.dropna()
+	
+	# grab source data 
+	source_data.data = {
+		'Country'             : selected.countryname,
+		'Year'           : selected.year,
+		'LPGrowthAgriculture' : selected.Agriculture
+	}
+	
+		
+
+# Generate columns for the table
+columns = [TableColumn(field="Country", title="Country"),
+	   TableColumn(field="Year", title="Year"),
+	   TableColumn(field="LPGrowthAgriculture", title="LP Growth Agriculture"),
+]
+
+
+
+
+
+
+# Generate the Button Call
+button_horizLP = Button(label="Download Data", button_type="success")
+button_horizLP.callback = CustomJS(args=dict(source=source_data),
+                           code=open(join(dirname(__file__), 'models', "download_horizLP.js")).read())
+
+
+# Generate Data Table for HorizLP
+data_table = DataTable(source=source_data, columns=columns, width=800, fit_columns=False)
+
+controls = widgetbox(button)
+table = widgetbox(data_table)
+
+curdoc().add_root(row(controls, table))
+curdoc().title = "Export CSV"
+
+update()
+
+
+
+
+

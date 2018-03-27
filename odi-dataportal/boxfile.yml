@@ -1,0 +1,25 @@
+
+run.config:
+  engine: python
+  engine.config: 
+     runtime: python-3.6
+  extra_packages:
+     - nginx
+     - py36-psycopg2-2.7.3.2
+
+
+data.db:
+   image: nanobox/postgresql:9.5
+
+deploy.config:
+   before_live: 
+      web.site:
+          - python db.py
+
+
+web.site: 
+  start: 
+      nginx: nginx -c /app/etc/nginx.conf        
+      python: bokeh serve --address=0.0.0.0 --port=3000 --allow-websocket-origin=odi-dataportal.nanoapp.io Portal
+
+
