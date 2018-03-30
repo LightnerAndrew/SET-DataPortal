@@ -47,3 +47,8 @@ TX.VAL.MRCH.CD.WT  |Merchandise exports (current US$)
 IC.BUS.EASE.XQ     |Ease of doing business index (1=most business-friendly regulations)
 NY.GNP.ATLS.CD     |GNI, Atlas method (current US$)
 NY.GNP.MKTP.KD     |GNI (constant 2010 US$)
+NY.GDP.PCAP.KD     |GDP per capita (constant 2010 US$)
+NY.GDP.PCAP.CD     |GDP per capita (current US$)
+NY.GDP.PCAP.PP.KD  |GDP per capita, PPP (constant 2011 international $)
+
+

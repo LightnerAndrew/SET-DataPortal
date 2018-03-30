@@ -1,9 +1,9 @@
 var data = source.data;
 var filetext = 'Country Name,Year,X-Variable, Y-Variable\n';
-for (i=0; i < data['countrycode'].length; i++) {
-    var currRow = [data['countrycode'][i].toString(),
+for (i=0; i < data['countryname'].length; i++) {
+    var currRow = [data['countryname'][i].toString(),
                    data['year'][i].toString(),
-		   data['xx'][i].toString(), 
+		   data['xx'][i].toString(),
 		   data['yy'][i].toString().concat('\n')];
 
     var joined = currRow.join();

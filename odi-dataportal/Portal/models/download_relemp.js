@@ -1,7 +1,7 @@
 var data = source.data;
 var filetext = 'Country,Year,ChangeEmploymentShare,RelativeLabourProductivity\n';
-for (i=0; i < data['countrycode'].length; i++) {
-    var currRow = [data['countrycode'][i].toString(),
+for (i=0; i < data['countryname'].length; i++) {
+    var currRow = [data['countryname'][i].toString(),
                    data['Industry'][i].toString(),
 		   data['empave'][i].toString(),
                    data['relLP'][i].toString().concat('\n')];
