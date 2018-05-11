@@ -59,7 +59,7 @@ def connect(user, password, db, host='localhost', port=5432):
     return engine, connection, meta
 
 #collect key variables to access data using connect function
-engine, connection, meta = connect('postgres', 'PetiteTigresse', 'ODI-dataportal')
+engine, connection, meta = connect()
 
 
 
