@@ -205,22 +205,6 @@ tools = "pan,wheel_zoom,box_zoom,reset,save"
 
 
 
-####################################################
-############  Useful Functions      ################
-####################################################
-
-
-def obs_footnote(country_vals):
-    obs = []
-    for i in country_vals:
-        end = ', '
-        if len(country_vals)==n:
-            end='. '
-
-        obs+= i +': '+str(list(consecutive(data[data['countryname']==i]['year'].as_matrix()))).strip('[]')+end
-        n+=1
-    return obs
-
 
 #####################################################################
 #####################################################################
