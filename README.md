@@ -13,6 +13,12 @@ We have attempted to document all modifications to the data. These files can be 
 ### Improvements 
 We eventually aim to examine all sources within the Sources and Methods Paper and include more information on the constraints of particular sources of data. Moreover, we aim to include the indicator and country-specific information along with each plot. 
 
+### Sources
+- [World development indicators](https://data.worldbank.org/indicator). Washington, D.C. :The World Bank.
+- [UNData](http://data.un.org/DataMartInfo.aspx). Geneva, Switzerland : United Nations. 
+- [ILOstat](www.ilo.org/ilostat/faces/wcnav_defaultSelection). Geneva, Switzerland : International Labour Organization. 
+
+
 Any feedback on future improvements is more than welcome. 
 
 
