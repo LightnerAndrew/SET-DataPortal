@@ -20,7 +20,13 @@ from bokeh.layouts import layout, widgetbox, row, column
 from bokeh.transform import factor_cmap, dodge
 from bokeh.palettes import Category20b, Viridis, Category20
 from bokeh.core.properties import value
-
+import ast
+#import statsmodels.api as sm
+#from statsmodels.distributions.mixture_rvs import mixture_rvs
+from scipy import stats
+import scipy.special
+from scipy.stats import skew, kurtosis
+from scipy.stats import norm
 
 # Other packages
 import os
@@ -103,6 +109,28 @@ indicators = [(axis_map_notes[i][0],i) for i in axis_map_notes]
 
 
 
+
+############################################################################
+##############              List of Vars                   #################
+############################################################################
+
+# List of variables located in the jsom file
+# Also includes lables and sources.
+axis_map_notes = json.load(open(join(dirname(__file__), 'TextFiles', 'vars_json.txt')))
+
+
+# Generate group variable dictionary for the box and whisker plot
+# The World Bank Income variable is currnetly unreliable - need to revisitself.
+# Return - 'World Bank Income': 'Var189' when fixed.
+GroupVars = {'SET Fragility Index': 'Var188', 'Within World Bank Index': 'Var190', 'Within OECD Index': 'Var187'}
+
+
+#### Generate indicator list for multi-variable selections
+indicators = [(axis_map_notes[i][0],i) for i in axis_map_notes]
+
+
+
+
 #########################################################
 ########## Generate CountryChoice Widget Early  #########
 #########################################################
@@ -111,7 +139,11 @@ indicators = [(axis_map_notes[i][0],i) for i in axis_map_notes]
 # This is because each have its own callback whch refers to a different update function,
 # When they point to multiple update functions, the app freezes.
 
-CountryList = [(i, i) for i in ['Outside OECD Index', 'Within OECD Index', 'Active Conflict', 'At Risk of Conflict', 'Limited Conflict', 'Subnational Conflict', 'Transition From Conflict', 'Outside WB Index', 'Within WB Index', 'Upper middle income', 'Lower middle income', 'Low income', 'Afghanistan', 'Albania', 'Algeria', 'Angola', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belize', 'Benin', 'Bhutan', 'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'Brunei Darussalam', 'Burkina Faso', 'Burundi', 'Cabo Verde', 'Cambodia', 'Cameroon', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros', 'Congo Republic', 'Costa Rica', "Cote d'Ivoire", 'Cuba', 'DR Congo', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Ethiopia', 'Fiji', 'Gabon', 'Gambia', 'Georgia', 'Ghana', 'Grenada', 'Guatemala', 'Guinea', 'Guinea-Bissau', 'Guyana', 'Haiti', 'Honduras', 'Hong Kong', 'India', 'Indonesia', 'Iran', 'Iraq', 'Jamaica', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati', 'Kosovo', 'Kuwait', 'Kyrgyz Republic', 'Laos', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Macao', 'Macedonia', 'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Marshall Islands', 'Mauritania', 'Mauritius', 'Mexico', 'Micronesia, Fed. Sts.', 'Moldova', 'Mongolia', 'Montenegro', 'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Nicaragua', 'Niger', 'Nigeria', 'North Korea', 'Oman', 'Pakistan', 'Palau', 'West Bank and Gaza', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Qatar', 'Russia', 'Rwanda', 'Samoa', 'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Solomon Islands', 'Somalia', 'South Africa', 'South Korea', 'South Sudan', 'Sri Lanka', 'Sudan', 'Suriname', 'Swaziland', 'Syria', 'Tajikistan', 'Tanzania', 'Thailand', 'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan', 'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 'Uruguay', 'Uzbekistan', 'Vanuatu', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe']]
+CountryList = [(i, i) for i in ['Outside OECD Index', 'Within OECD Index', 'Active Conflict', 'At Risk of Conflict', 'Limited Conflict', 'Subnational Conflict', 'Transition From Conflict', 'Outside WB Index', 'Within WB Index', 'Afghanistan', 'Albania', 'Algeria', 'Angola', 'Antigua and Barbuda', 'Argentina', 'Armenia', 'Azerbaijan', 'Bahamas', 'Bahrain', 'Bangladesh', 'Barbados', 'Belarus', 'Belize', 'Benin', 'Bhutan', 'Bolivia', 'Bosnia and Herzegovina', 'Botswana', 'Brazil', 'Brunei Darussalam', 'Burkina Faso', 'Burundi', 'Cabo Verde', 'Cambodia', 'Cameroon', 'Central African Republic', 'Chad', 'Chile', 'China', 'Colombia', 'Comoros', 'Congo Republic', 'Costa Rica', "Cote d'Ivoire", 'Cuba', 'DR Congo', 'Djibouti', 'Dominica', 'Dominican Republic', 'Ecuador', 'Egypt', 'El Salvador', 'Equatorial Guinea', 'Eritrea', 'Ethiopia', 'Fiji', 'Gabon', 'Gambia', 'Georgia', 'Ghana', 'Grenada', 'Guatemala', 'Guinea', 'Guinea-Bissau', 'Guyana', 'Haiti', 'Honduras', 'Hong Kong', 'India', 'Indonesia', 'Iran', 'Iraq', 'Jamaica', 'Jordan', 'Kazakhstan', 'Kenya', 'Kiribati', 'Kosovo', 'Kuwait', 'Kyrgyz Republic', 'Laos', 'Lebanon', 'Lesotho', 'Liberia', 'Libya', 'Macao', 'Macedonia', 'Madagascar', 'Malawi', 'Malaysia', 'Maldives', 'Mali', 'Marshall Islands', 'Mauritania', 'Mauritius', 'Mexico', 'Micronesia, Fed. Sts.', 'Moldova', 'Mongolia', 'Montenegro', 'Morocco', 'Mozambique', 'Myanmar', 'Namibia', 'Nauru', 'Nepal', 'Nicaragua', 'Niger', 'Nigeria', 'North Korea', 'Oman', 'Pakistan', 'Palau', 'West Bank and Gaza', 'Panama', 'Papua New Guinea', 'Paraguay', 'Peru', 'Philippines', 'Qatar', 'Russia', 'Rwanda', 'Samoa', 'Sao Tome and Principe', 'Saudi Arabia', 'Senegal', 'Serbia', 'Seychelles', 'Sierra Leone', 'Solomon Islands', 'Somalia', 'South Africa', 'South Korea', 'South Sudan', 'Sri Lanka', 'Sudan', 'Suriname', 'Swaziland', 'Syria', 'Tajikistan', 'Tanzania', 'Thailand', 'Timor-Leste', 'Togo', 'Tonga', 'Trinidad and Tobago', 'Tunisia', 'Turkey', 'Turkmenistan', 'Tuvalu', 'Uganda', 'Ukraine', 'United Arab Emirates', 'Uruguay', 'Uzbekistan', 'Vanuatu', 'Venezuela', 'Vietnam', 'Yemen', 'Zambia', 'Zimbabwe']]
+
+# create a list of group countries for later analysis
+group_list = ['Outside OECD Index', 'Within OECD Index', 'Active Conflict', 'At Risk of Conflict', 'Limited Conflict', 'Subnational Conflict', 'Transition From Conflict', 'Outside WB Index', 'Within WB Index']
+
 
 # Single Country selections for each subject category
 CountrySTRUC = Select(title="Country or Group Category", value="Malawi", options=CountryList)
@@ -196,10 +228,13 @@ axis_legend_orientation = {'Horizontal': 'horizontal',
 ####################################################
 
 # SET Palette based on
-SET_palette = ['#361c7f', '#b35900', '#990000', '#016450', '#02818a', '#3690c0', '#67a9cf', '#a6bddb', '#d0d1e6', '#fed976']
-color_blender = ['#4d004b', '#810f7c', '#88419d', '#8c6bb1', '#8c96c6', '#9ebcda', '#bfd3e6', '#e0ecf4', '#f7fcfd']
+SET_palette = ['#361c7f', '#c49c51', 'white', '#c84f46', '#287abb', '#016450', '#02818a', '#3690c0', '#67a9cf', '#a6bddb', '#d0d1e6', '#fed976']
+SET_palette_old = ['#361c7f', '#b35900', '#990000', '#016450', '#02818a', '#3690c0', '#67a9cf', '#a6bddb', '#d0d1e6', '#fed976']
+color_blender = [ '#361c7f', '#2D0D8E','#483D68', '#C3C0CB','#FFFAEF', '#E0C78F', '#c49c51','#4C475C','#5B4E82','#79728F', '#A2A0A9', '#4d004b', '#810f7c', '#88419d', '#8c6bb1', '#8c96c6', '#9ebcda', '#bfd3e6', '#e0ecf4', '#f7fcfd']
+
 large_color = Category20b[20]
 
+background_color ='#383951'
 
 ####################################################
 ############  Define Tool Options   ################
@@ -255,7 +290,7 @@ def SET_style(p):
     p.title.text_color = '#361c7f'
     p.title.text_font = "arial"
     p.title.text_font_style = "bold"
-    p.grid.grid_line_color='#CBCBCB'
+    p.grid.grid_line_color='DarkGrey'
     p.grid.grid_line_width=2.0
     p.xaxis.axis_label=''
     p.axis.axis_label_text_font = 'arial'
@@ -299,6 +334,8 @@ def spacing_alg(C_list):
 
 
 
+
+
 ####################################################################################################
 ####################################################################################################
 #########################        Plot Creation Functions                   #########################
@@ -308,6 +345,111 @@ def spacing_alg(C_list):
 # The following sections creates the 'create_plot()' functions and the according 'select_obs' functions to access relevant dataself.
 # Where relevent, data selection for download functions will also be created here.
 
+
+
+#####################################################################
+#####################################################################
+###   Total Factor Productivity - Distribution                    ####
+#####################################################################
+#####################################################################
+CountryEnterprise = [(i, i) for i in ['Afghanistan: 2008', 'Albania: 2007', 'Angola: 2006', 'Argentina: 2006', 'Armenia: 2009', 'Azerbaijan: 2009', 'Belarus: 2008', 'Bolivia: 2006', 'Bosnia and Herzegovina: 2009', 'Botswana: 2006', 'Brazil: 2009', 'Bulgaria: 2007', 'Bulgaria: 2009', 'BurkinaFaso: 2009', 'Burundi: 2006', 'Cameroon: 2009', 'Chile: 2006', 'Colombia: 2006', 'Croatia: 2007', 'Czech Republic: 2009', "Cote d'Ivoire: 2009", 'DRC: 2006', 'Ecuador: 2006', 'ElSalvador: 2006', 'Estonia: 2009', 'Fyr Macedonia: 2009', 'Gambia: 2006', 'Georgia: 2008', 'Ghana: 2007', 'Guatemala: 2006', 'Guinea: 2006', 'GuineaBissau: 2006', 'Honduras: 2006', 'Hungary: 2009', 'Indonesia: 2009', 'Kazakhstan: 2009', 'Kosovo: 2009', 'Kyrgyz Republic: 2009', 'Latvia: 2009', 'Lithuania: 2009', 'Madagascar: 2009', 'Mali: 2007', 'Mauritania: 2006', 'Mauritius: 2009', 'Mexico: 2006', 'Moldova: 2009', 'Mongolia: 2009', 'Montenegro: 2009', 'Mozambique: 2007', 'Namibia: 2006', 'Nepal: 2009', 'Nicaragua: 2006', 'Panama: 2006', 'Paraguay: 2006', 'Peru: 2006', 'Poland: 2009', 'Romania: 2009', 'Russia: 2009', 'Rwanda: 2006', 'Senegal: 2007', 'Serbia: 2009', 'Slovak Republic: 2009', 'Slovenia: 2009', 'SouthAfrica: 2007', 'Swaziland: 2006', 'Tajikistan: 2008', 'Tanzania: 2006', 'Turkey: 2008', 'Uganda: 2006', 'Ukraine: 2008', 'Uruguay: 2006', 'Uzbekistan: 2008', 'Zambia: 2007']
+]
+
+
+# Generate widgets for the TFP histogram
+title_tfp = TextInput(title="Title", value="Distribution of Firm-level Productivity")
+font_tfp = Select(title="Title Font Size", options=sorted(axis_font.keys()), value="24")
+Enterprise_countries = Select(title="Country/Year Selection", options=CountryEnterprise, value="Afghanistan: 2008")
+
+# Get Data -
+#### Access TFP table in the sql
+### Get data
+try:
+    data_tfp = Table('odi-portal-tfp4', MetaData(), autoload=True, autoload_with=engine)
+except:
+    print('error')
+
+## access the table - dataset
+stmt_tfp = select([data_tfp])
+
+def select_obs_tfp():
+    country = Enterprise_countries.value
+    stmt = stmt_tfp.where(data_tfp.columns.countryyear==country)
+
+    V = ['countryyear', 'TFPdist', 'STD', 'SKEW', 'KURT', 'OBS', 'Coef on Export', 'Pct Exporters', 'Adequate Data']
+    # select observations using sqlalchemy
+    dictionary= {}
+
+    for i in V:
+        dictionary[i] = []
+
+    # place data in the dataframe
+    for result in connection.execute(stmt):
+        for i in V:
+            dictionary[i].append(result[i])
+    # change the form of the TFP distribution into proper list.
+
+    dictionary['TFPdist'] = ast.literal_eval(dictionary['TFPdist'][0].replace('{', '[').replace('}', ']'))
+
+    return dictionary
+
+def create_figure_tfp():
+    # access data
+    data = select_obs_tfp()
+
+    p = figure(title="",tools="save", plot_width = 750,
+            background_fill_color=background_color)
+
+    #mu, sigma = norm.fit(data)
+    TFPresid = data['TFPdist']
+    mu, sigma = norm.fit(TFPresid)
+
+    measured = np.random.normal(mu, sigma, 1000)
+    hist, edges = np.histogram(TFPresid, density=True, bins=25)
+    dx = edges[1] - edges[0]
+    cdf = np.cumsum(hist)
+
+
+    x = np.linspace(-5,5, 1000)
+    pdf = 1/(sigma * np.sqrt(2*np.pi)) * np.exp(-(x-mu)**2 / (2*sigma**2))
+    #cdf = (1+scipy.special.erf((x-mu)/np.sqrt(2*sigma**2)))/2
+    kde = sm.nonparametric.KDEUnivariate(TFPresid)
+    kde.fit()
+
+
+    p.quad(top=hist, bottom=0, left=edges[:-1], right=edges[1:],
+            color= '#361c7f', fill_alpha =0.65, line_width = 1.8 )
+    p.line(x, pdf, line_color='white', line_width=10, alpha=0.7, legend="Normal")
+    p.line(kde.support, kde.density, line_color='#c84f46', line_width=10, alpha=0.7, legend="Kernel")
+
+    p.legend.location = "center_right"
+    p.legend.background_fill_color = "darkgrey"
+    p.xaxis.axis_label = 'x'
+    p.yaxis.axis_label = 'Pr(x)'
+
+
+    note = 'Summary Statistics - Standard Deviation: '+str(data['STD'][0])+', Skewness: '+str(data['SKEW'][0])+ ', Kurtosis: '+str(data['KURT'][0])+'.' + 'There are ' +str(data['OBS'][0])+ ' firm observations. '+ 'This represents '+str(round(data['Adequate Data'][0]*100, 3)) + ' percent of the all manufacturing firms in this Enterprise Survey. All observations which do not record all imputs necessary for total factor productivity calculation are dropped. ' + str(round(data['Pct Exporters'][0]*100, 3))  + ' percent of the firms, after dropping those with missing observations, record direct exports.'
+
+
+    ### Add note below:
+    obs = note
+    obs = "\n".join(wrap(obs, 110)).split('\n')
+
+    d = {0:"", 1:"", 2:"", 3:""}
+    for i in range(0, len(obs)):
+        d[i] = obs[i]
+    for i in d:
+        caption1 = Label(text=d[i], **label_opts, text_color='#999999')
+        p.add_layout(caption1, 'below')
+
+    # add SET style
+    p = SET_style(p)
+
+    p.title.text = title_tfp.value
+    fontvalue = font_boxplot.value+'pt'
+    p.title.text_font_size = fontvalue
+
+    return p
 
 
 #####################################################################
@@ -387,10 +529,10 @@ def select_obs_heatmap():
     ############################
     threshold_dict = {i: [np.round(np.percentile(selected[i].dropna(), int(T_choice.value)), 2)] for i in grouping}
     # Reshape threshold dataset to be most useful
-    print('this is the problem')
+
     threshold =pd.melt(pd.DataFrame(threshold_dict), value_vars=list(pd.DataFrame(threshold_dict).columns[:-1]))
     # Small amount of cleaning
-    print('it made it here')
+
     threshold['variable'] = threshold['variable'].str.strip()
 
 
@@ -682,6 +824,8 @@ def create_figure_boxplot():
 
     # Choose the order of the plots
     order = True
+
+    #
     if bar_order.active ==1:
         order=False
 
@@ -743,9 +887,6 @@ def create_figure_boxplot():
         #q2.sort_values(['VarInt'], ascending=order)
         cats = list(groups.index)
 
-
-        # place all outliers within the group dataframe
-
         # Find outliers in boxplot / whiskers plot.
         def outliers(group):
             cat = group.name
@@ -759,7 +900,7 @@ def create_figure_boxplot():
 
 
         # make the plot
-        p = figure(tools="save", background_fill_color="#eeeafa", title="", x_range=cats, plot_width = 800, plot_height=800)
+        p = figure(tools="save", background_fill_color=background_color, title="", x_range=cats, plot_width = 800, plot_height=800)
 
         # if no outliers, shrink lengths of stems to be no longer than the minimums or maximums
         qmin = groups['min'].to_frame().rename(columns={'min': 'VarInt'})
@@ -768,16 +909,16 @@ def create_figure_boxplot():
         lower.VarInt = [max([x,y]) for (x,y) in zip(list(qmin.loc[:,'VarInt']),lower.VarInt)]
 
         # stems
-        p.segment(cats, upper.VarInt, cats, q3.VarInt, line_color="black")
-        p.segment(cats, lower.VarInt, cats, q1.VarInt, line_color="black")
+        p.segment(cats, upper.VarInt, cats, q3.VarInt, line_color="white",  line_width=5)
+        p.segment(cats, lower.VarInt, cats, q1.VarInt, line_color="white",  line_width=5)
 
         # boxes
-        p.vbar(cats, 0.7, q2.VarInt, q3.VarInt, fill_color="#361c7f", line_color="black")
-        p.vbar(cats, 0.7, q1.VarInt, q2.VarInt, fill_color="#b35900", line_color="black")
+        p.vbar(cats, 0.7, q2.VarInt, q3.VarInt, fill_color="#361c7f", line_color="white",  line_width=2.5)
+        p.vbar(cats, 0.7, q1.VarInt, q2.VarInt, fill_color= '#c49c51', line_color="white",  line_width=2.5)
 
         # whiskers (almost-0 height rects simpler than segments)
-        p.rect(cats, lower.VarInt, 0.2, 0.01, line_color="black")
-        p.rect(cats, upper.VarInt, 0.2, 0.01, line_color="black")
+        p.rect(cats, lower.VarInt, 0.2, 0.01, line_color="white", line_width=5)
+        p.rect(cats, upper.VarInt, 0.2, 0.01, line_color="white",  line_width=5)
 
         # small edits to style
         p.xgrid.grid_line_color = None
@@ -792,8 +933,7 @@ def create_figure_boxplot():
             else:
                 ID = group_val
 
-
-            line = p.circle(x = ID, y='VarInt', color ="#361c7f", source=source, size=15)
+            line = p.circle(x = ID, y='VarInt', color ="#361c7f", source=source, size=15, line_color='white', line_width=2)
 
             hover = HoverTool(
                     renderers=[line],
@@ -841,7 +981,6 @@ def create_figure_boxplot():
         p.xaxis.axis_label=''
         p.yaxis.axis_label=boxplot_var.value
         p.title.text = title_boxplot.value
-
 
     # Return text if insufficient data is selected
     if len(no_data) >0:
@@ -983,17 +1122,17 @@ def create_figure_bar_cross():
             C_list = list(data['countryname'].unique())
             source = ColumnDataSource(data=dict(country=C_list, counts=list(data[Var_Interest])))
             #ource_cicle = ColumnDataSource(data=dict(country=df['countryname'],counts = df[Var_Interest]))
-            p = figure(x_range=C_list, plot_height=(int(bar_height.value)*100), plot_width=900, background_fill_color="#eeeafa")
+            p = figure(x_range=C_list, plot_height=(int(bar_height.value)*100), plot_width=900, background_fill_color=background_color)
             colors = SET_palette[0:len(C_list)]
             if len(C_list) >7:
                 colors = Category20b[len(C_list)]
 
             # Generate Plot
-            p.vbar(x='country', top='counts', width=0.9, source=source, alpha=0.6,
-                   line_color='white', fill_color=factor_cmap('country', palette=colors, factors=C_list))
+            p.vbar(x='country', top='counts', width=0.9, source=source, alpha=0.85, line_width=3.5,
+                   color=factor_cmap('country', palette=colors, factors=C_list))
             #p.circle(x='country', y='counts', source =source_cicle, size=30, fill_color=factor_cmap('country', palette=colors, factors=C_list))
             ### Add labels to bars
-            labels = LabelSet(x='country', y='counts', text='counts', level='glyph',
+            labels = LabelSet(x='country', y='counts', text='counts', level='glyph', text_color='DarkGrey', text_font='arial',
             x_offset=-13.5, y_offset=0, source=source, render_mode='canvas')
             p.add_layout(labels)
 
@@ -1035,7 +1174,7 @@ def create_figure_bar_cross():
             groups = int(group_years.value)
 
             ##### Generate the group vars
-            data[Var_Interest] = data.groupby(['countryname'])[Var_Interest].apply(pd.rolling_mean, groups, min_periods=groups)
+            data[Var_Interest] = data.groupby(['countryname'])[Var_Interest].apply(lambda x:x.rolling(center=False,window=groups, min_periods=groups).mean())
             ### Drop the early years without previous records for means.
             data['year'] = data['year'].astype(int)
             data.dropna(inplace=True)
@@ -1102,10 +1241,10 @@ def create_figure_bar_cross():
 
 
 
-            p = figure(x_range=C_list, plot_height=600, plot_width=900, background_fill_color="#eeeafa")
+            p = figure(x_range=C_list, plot_height=600, plot_width=900, background_fill_color=background_color)
 
             for y in range(0,len(years)):
-                p.vbar(x=dodge('country', spacing[y], range=p.x_range), alpha=0.6,top=str(years[y]), width=bar_width.value, source=source,
+                p.vbar(x=dodge('country', spacing[y], range=p.x_range), alpha=0.85, line_width=3.5,top=str(years[y]), width=bar_width.value, source=source,
                    color=colors[y], legend=value(str(years[y])))
 
             p.yaxis.axis_label = bar_cross_var.value
@@ -1126,7 +1265,7 @@ def create_figure_bar_cross():
             groups = int(group_years.value)
 
             ##### Generate the group vars
-            data[Var_Interest] = data.groupby(['countryname'])[Var_Interest].apply(pd.rolling_mean, groups, min_periods=groups)
+            data[Var_Interest] = data.groupby(['countryname'])[Var_Interest].apply(lambda x:x.rolling(center=False,window=groups, min_periods=groups).mean())
             ### Drop the early years without previous records for means.
             data['year'] = data['year'].astype(int)
             data.dropna(inplace=True)
@@ -1176,10 +1315,10 @@ def create_figure_bar_cross():
             spacing = spacing_alg(C_list)
 
 
-            p = figure(x_range=dictionary['years'], plot_height=550, plot_width=900, background_fill_color="#eeeafa")
+            p = figure(x_range=dictionary['years'], plot_height=550, plot_width=900, background_fill_color=background_color)
 
             for y in range(0,len(C_list)):
-                p.vbar(x=dodge('years', spacing[y], range=p.x_range), alpha=0.6, top=C_list[y], width=bar_width.value, source=source,
+                p.vbar(x=dodge('years', spacing[y], range=p.x_range),alpha=0.85, line_width=3.5, top=C_list[y], width=bar_width.value, source=source,
                    color=colors[y], legend=value(C_list[y]))
             p.yaxis.axis_label = bar_cross_var.value
 
@@ -1193,7 +1332,7 @@ def create_figure_bar_cross():
             )
             p.add_tools(hover)
         ## Sizing settings
-        if len(country_vals)>3:
+        if (len(country_vals)>3) and (bar_plot_options.active!=2):
             p.xaxis.major_label_orientation = pi/2
 
 
@@ -1210,6 +1349,7 @@ def create_figure_bar_cross():
         p.title.text_font_size = fontvalue
         p.legend.orientation = axis_legend_orientation[legend_location_ori_bar_cross.value]
         p.legend.location = axis_legend[legend_location_bar_cross.value]
+        p.legend.background_fill_alpha=.25
 
 
     except IndexError:
@@ -1269,7 +1409,7 @@ def select_obs_linecross():
 
     # Generate the moving average
     selected = pd.DataFrame(dictionary).sort_values('year')
-    selected[Var_Interest] = selected.groupby(['countryname'])[Var_Interest].apply(pd.rolling_mean, rolling_linecross.value, min_periods=rolling_linecross.value)
+    selected[Var_Interest] = selected.groupby(['countryname'])[Var_Interest].apply(lambda x:x.rolling(center=False,window=rolling_linecross.value, min_periods=rolling_linecross.value).mean())
 
     dict2 = {'a': [1]}
 
@@ -1288,7 +1428,7 @@ def select_obs_linecross():
             dict2['year'].append(result.year)
             dict2[Var_Interest].append(result[Var_Interest])
         dict2 = pd.DataFrame(dict2)
-        dict2[Var_Interest] = dict2.groupby(['countryname'])[Var_Interest].apply(pd.rolling_mean, rolling_linecross.value, min_periods=rolling_linecross.value)
+        dict2[Var_Interest] = dict2.groupby(['countryname'])[Var_Interest].apply(lambda x:x.rolling(center=False,window=rolling_linecross.value, min_periods=rolling_linecross.value).mean())
 
 
     source_scatter = ColumnDataSource(dict2)
@@ -1356,24 +1496,24 @@ def create_figure_linecross():
         legends = data['legends']
         source_scatter = data['source_scatter']
         fontvalue = font_linecross.value+'pt'
-        num = len(countries.value)
-        colors = SET_palette[0:num]
+        num = len(countries.value)+1
+        colors = SET_palette[1:num]
 
 
 
-        p = figure(plot_width=900, plot_height=650, background_fill_color="#eeeafa")
+        p = figure(plot_width=900, plot_height=650, background_fill_color=background_color)
         a = 1
         if linecross_scatter.active ==1:
-            p = figure(plot_width=1000, plot_height=600, background_fill_color="#eeeafa")
+            p = figure(plot_width=1000, plot_height=600, background_fill_color=background_color)
             p.circle('year', Var_Interest, source=source_scatter, color='#999999', alpha=.25)
 
         l=0
         for n in country_vals:
-            p.line('year', Var_Interest, legend=legends[n], source=lines[n], line_width=4, color=colors[l], muted_color=colors[l], muted_alpha=0.3)
+            p.line('year', Var_Interest, legend=legends[n], source=lines[n], line_width=8, color=colors[l], muted_color=colors[l], muted_alpha=0.3)
             l+=1
         l=0
         for n in country_vals:
-            p.circle('year', Var_Interest,legend=legends[n], name=n, source=sources[n], color=colors[l], size=10, muted_color=colors[l], muted_alpha=0.3)
+            p.circle('year', Var_Interest,legend=legends[n], name=n, source=sources[n], color=colors[l], size=15, muted_color=colors[l], muted_alpha=0.3)
             l+=1
 
         p.legend.location='bottom_left'
@@ -1428,11 +1568,6 @@ def update_linecrossdata():
     maxyear = int(maxyear_linecross.value)
 
 
-    #selected = data.loc[data['countrycode'].isin(country_vals)]
-    # Select the Right Variables
-    #selected = selected[['countryname', 'countrycode', 'year', Var_Interest]]
-
-
     # Select the Correct Observations
     stmt = stmt_main.where(and_(
         data_table.columns.countryname.in_(country_vals),
@@ -1450,15 +1585,15 @@ def update_linecrossdata():
 
 
     selected = pd.DataFrame(dictionary)
-    selected[Var_Interest] = selected.groupby(['countryname'])[Var_Interest].apply(pd.rolling_mean, rolling_linecross.value, min_periods=rolling_linecross.value)
+    selected[Var_Interest] = selected.groupby(['countryname'])[Var_Interest].apply(lambda x:x.rolling(center=False,window=rolling_linecross.value, min_periods=rolling_linecross.value).mean())
 
 
 
     # Soruces for line graph
     source.data = {
-		'Country'             : selected.countryname,
-		'Year'           : selected.year,
-		'Var_Interest' : selected[Var_Interest]
+        'Country'             : selected.countryname,
+        'Year'           : selected.year,
+        'Var_Interest' : selected[Var_Interest]
         }
 
     return source
@@ -1486,7 +1621,7 @@ columns_linescross = [
 exportarea_title = TextInput(title="Title", value="Export Composition Over Time")
 min_yearTRADE = Select(title="Start Year", options=sorted(axis_year.keys()), value="1991")
 max_yearTRADE = Select(title="End Year", options=sorted(axis_year.keys()), value="2016")
-font_TRADE = Select(title="Title Font Size", options=sorted(axis_font.keys()), value="14")
+font_TRADE = Select(title="Title Font Size", options=sorted(axis_font.keys()), value="24")
 note_TRADE = TextInput(title="Note Content", value="X-Axis: Proportion of Total Merchandise Exports. Y-axis: Year. Source: World Bank Development Indicators.")
 note_TRADE = TextInput(title="Additional Note Content", value="")
 note_TRADE2 = TextInput(title="Additional Note Content - Line 2", value="")
@@ -1496,103 +1631,107 @@ note_TRADE4 = TextInput(title="Additional Note Content - Line  4", value="")
 
 
 def select_obs_trade():
-    country_val = CountryTRADE.value
+    try:
+        country_val = CountryTRADE.value
 
-    #selected = export_data.loc[export_data['countryname']==country_val]
-    minyear = int(min_yearTRADE.value)
-    maxyear = int(max_yearTRADE.value)
+        #selected = export_data.loc[export_data['countryname']==country_val]
+        minyear = int(min_yearTRADE.value)
+        maxyear = int(max_yearTRADE.value)
 
-    # Select the Correct Observations
-    stmt = stmt_main.where(and_(
-        data_table.columns.countryname==country_val,
-        data_table.columns.year.between(minyear,maxyear)))
+        # Select the Correct Observations
+        stmt = stmt_main.where(and_(
+            data_table.columns.countryname==country_val,
+            data_table.columns.year.between(minyear,maxyear)))
 
-    dictionary = {'countryname': [],
-             'year':[],
-             'exports_food_pctsum':[],
-             'exports_oresmet_pctsum':[],
-             'exports_fuel_pctsum':[],
-             'exports_manu_pctsum':[],
-             'exports_agraw_pctsum':[],
-             }
-    for result in connection.execute(stmt):
-        dictionary['countryname'].append(result.countryname)
-        dictionary['exports_food_pctsum'].append(result.Var184)
-        dictionary['exports_fuel_pctsum'].append(result.Var183)
-        dictionary['exports_oresmet_pctsum'].append(result.Var185)
-        dictionary['exports_manu_pctsum'].append(result.Var186)
-        dictionary['exports_agraw_pctsum'].append(result.Var182)
-        dictionary['year'].append(result.year)
-        #dictionary[Var_Interest].append(result[Var_Interest])
+        dictionary = {'countryname': [],
+                 'year':[],
+                 'exports_food_pctsum':[],
+                 'exports_oresmet_pctsum':[],
+                 'exports_fuel_pctsum':[],
+                 'exports_manu_pctsum':[],
+                 'exports_agraw_pctsum':[],
+                 }
+        for result in connection.execute(stmt):
+            dictionary['countryname'].append(result.countryname)
+            dictionary['exports_food_pctsum'].append(result.Var184)
+            dictionary['exports_fuel_pctsum'].append(result.Var183)
+            dictionary['exports_oresmet_pctsum'].append(result.Var185)
+            dictionary['exports_manu_pctsum'].append(result.Var186)
+            dictionary['exports_agraw_pctsum'].append(result.Var182)
+            dictionary['year'].append(result.year)
+            #dictionary[Var_Interest].append(result[Var_Interest])
 
 
-    selected = pd.DataFrame(dictionary).dropna()
-
+        selected = pd.DataFrame(dictionary).dropna()
+    except:
+        selected = pd.DataFrame()
     return selected
 
 def create_figure_trade():
     selected = select_obs_trade()
+    if len(selected)!=1:
 
-    try:
-        m = min(selected['year'])
-        M = max(selected['year'])
-        selected.set_index('year', inplace=True, drop=True)
-        selected.drop(['countryname'], axis=1, inplace=True)
-        selected.columns = ['yy0', 'yy1','yy2','yy3','yy4']
-        source = ColumnDataSource(selected)
+        try:
+            m = min(selected['year'])
+            M = max(selected['year'])
+            selected.set_index('year', inplace=True, drop=True)
+            selected.drop(['countryname'], axis=1, inplace=True)
+            selected.columns = ['yy0', 'yy1','yy2','yy3','yy4']
+            source = ColumnDataSource(selected)
 
-        def  stacked(selected):
-            df_top = selected.cumsum(axis=1)
-            df_bottom = df_top.shift(axis=1).fillna({'yy0': 0})[::-1]
-            df_stack = pd.concat([df_bottom, df_top], ignore_index=True)
-            return df_stack
-        names = ['Food', 'Fuel', 'Ores', 'Manu.', 'Ag. Raw']
-        areas = stacked(selected)
-        colors = color_blender[0:5]
-        x2 = np.hstack((selected.index[::-1], selected.index))
-        p = figure(x_range=(m, M), y_range=(0, 100), plot_height=600, plot_width=750)
-        p.grid.minor_grid_line_color = '#eeeeee'
+            def  stacked(selected):
+                df_top = selected.cumsum(axis=1)
+                df_bottom = df_top.shift(axis=1).fillna({'yy0': 0})[::-1]
+                df_stack = pd.concat([df_bottom, df_top], ignore_index=True)
+                return df_stack
+            names = ['Ores','Manu.','Fuel','Food','Raw Ag.']
+            names= ['Raw Ag.','Food','Fuel','Manu.','Ores',]
+            areas = stacked(selected)
+            colors = ['#2D0D8E','#483D68', '#C3C0CB','#D6C6A2','#c49c51']
+            x2 = np.hstack((selected.index[::-1], selected.index))
+            p = figure(x_range=(m, M), y_range=(0, 100), plot_height=600, plot_width=750)
+            p.grid.minor_grid_line_color = '#eeeeee'
 
-        p.patches([x2] * areas.shape[1], [areas[c].values for c in areas],
-                  color=colors, alpha=0.8, line_color=None)
-                  #legend=["%s Sector" % c for c in sectors]
+            p.patches([x2] * areas.shape[1], [areas[c].values for c in areas],
+                      color=colors, alpha=0.8, line_color=None)
+                      #legend=["%s Sector" % c for c in sectors]
 
-        p.line(x='year', y='yy0',source=source, color='#440154', line_width=.2)
-
-
-        ### Add legend outside the plot
-        labels = []
-        for i, area in enumerate(areas):
-            r = p.patch(x2, areas[area], color=colors[i], alpha=0.8, line_color=None)
-            labels.append(LegendItem(label=dict(value=names[i]), renderers=[r]))
-        legend = Legend(items=labels, location=(0, -30))
-        p.add_layout(legend, 'right')
+            p.line(x='year', y='yy0',source=source, color='#440154', line_width=.2)
 
 
-        # Add citiation and notes at the below the plot
-        msg1 = 'Source: World Bank Development Indicators. '+note_TRADE.value
-        caption1 = Label(text=msg1, **label_opts, text_color='#999999')
-        p.add_layout(caption1, 'below')
-
-        # Add SET formatting to the plot
-        p = SET_style(p)
-
-        # Adjust the Labels of the Plot
-        fontvalue = font_TRADE.value+'pt'
-        p.title.text = exportarea_title.value
-        p.title.text_font_size = fontvalue
-        p.yaxis.axis_label='Proportion of Total Merchandise Exports (%)'
+            ### Add legend outside the plot
+            labels = []
+            for i, area in enumerate(areas):
+                r = p.patch(x2, areas[area], color=colors[i], alpha=0.8, line_color=None)
+                labels.append(LegendItem(label=dict(value=names[i]), renderers=[r]))
+            legend = Legend(items=labels, location=(0, -30))
+            p.add_layout(legend, 'right')
 
 
+            # Add citiation and notes at the below the plot
+            msg1 = 'Source: World Bank Development Indicators. '+note_TRADE.value
+            caption1 = Label(text=msg1, **label_opts, text_color='#999999')
+            p.add_layout(caption1, 'below')
 
-        # Add the HoverTool to the plot
-        p.add_tools(hover_exports)
+            # Add SET formatting to the plot
+            p = SET_style(p)
 
-    except:
-        # Add countries with no data to the Div() using no_data_string() function created at the top of the document
+            # Adjust the Labels of the Plot
+            fontvalue = font_TRADE.value+'pt'
+            p.title.text = exportarea_title.value
+            p.title.text_font_size = fontvalue
+            p.yaxis.axis_label='Proportion of Total Merchandise Exports (%)'
+
+
+
+            # Add the HoverTool to the plot
+            p.add_tools(hover_exports)
+
+        except:
+            # Add countries with no data to the Div() using no_data_string() function created at the top of the document
+            p = Div(text='<style>\np {\n    font: "arial", arial;\n    text-align: justify;\n    text-justify: inter-word;\n    max-width: 500;\n}\n\n\n\n</style>\n\n<p>\n' +CountryTRADE.value +' records insufficient  trade composition data. Please reselect country/indicator options.\n</p>\n', width=900)
+    else:
         p = Div(text='<style>\np {\n    font: "arial", arial;\n    text-align: justify;\n    text-justify: inter-word;\n    max-width: 500;\n}\n\n\n\n</style>\n\n<p>\n' +CountryTRADE.value +' records insufficient  trade composition data. Please reselect country/indicator options.\n</p>\n', width=900)
-
-
     return p
 
 
@@ -1603,9 +1742,9 @@ hover_exports = HoverTool(
         ( 'Year',   '@year'            ),
         ( 'Ores and Metals', '@yy4{0.0 a}%' ),
         ( 'Manufactured Goods', '@yy3{0.0 a}%'     ),
-	( 'Fuel', '@yy2{0.0 a}%'),
-	( 'Food Products', '@yy1{0.0 a}%'       ),
-	( 'Raw Agriculture',  '@yy0{0.0 a}%'       )
+    ( 'Fuel', '@yy2{0.0 a}%'),
+    ( 'Food Products', '@yy1{0.0 a}%'       ),
+    ( 'Raw Agriculture',  '@yy0{0.0 a}%'       )
     ],
     # display a tooltip whenever the cursor is vertically in line with a glyph
     mode='vline'
@@ -1618,9 +1757,9 @@ def update_tradedata():
 
     # Soruces for line graph
     source.data = {
-		'Country'             : selected.countryname,
-		'Year'           : selected.year,
-		'Food Exports' : selected.exports_food_pctsum,
+        'Country'             : selected.countryname,
+        'Year'           : selected.year,
+        'Food Exports' : selected.exports_food_pctsum,
         'Ores and Metals' : selected.exports_oresmet_pctsum,
         'Fuel Exports' : selected.exports_fuel_pctsum,
         'Manufactured Goods' : selected.exports_manu_pctsum,
@@ -1654,7 +1793,7 @@ columns_tradedata = [
 tax_rc_title = TextInput(title="Title - Resources Disaggregated", value="Tax Composition Over Time - Resource Revenue Disaggregated")
 min_year_taxrc = Select(title="Start Year", options=sorted(axis_year.keys()), value="1991")
 max_year_taxrc = Select(title="End Year", options=sorted(axis_year.keys()), value="2016")
-fontrc = Select(title="Title Font Size", options=sorted(axis_font.keys()), value="14")
+fontrc = Select(title="Title Font Size", options=sorted(axis_font.keys()), value="24")
 note_taxrc = TextInput(title="Note Content", value="X-Axis: Proportion of Tax Revenue - Accounting for Resource Revenue. Y-axis: Year. Source: International Centre for Tax and Development.")
 
 
@@ -1781,9 +1920,9 @@ hover_tax = HoverTool(
         ( 'Year',   '@year'            ),
         ( 'Resources',  '@tot_resource_revpct{0.00 a}' ), # use @{ } for field names with spaces
         ( 'Income Taxes', '@direct_inc_sc_ex_resource_revpct{0.00 a}'      ),
-	    ( 'Goods and Services', '@tax_g_spct{0.00 a}'),
-	    ( 'Trade Taxes', '@tax_int_trade_transpct{0.00 a}'       ),
-	    ( 'Other Sources', '@other_rc{0.00 a}'     )
+        ( 'Goods and Services', '@tax_g_spct{0.00 a}'),
+        ( 'Trade Taxes', '@tax_int_trade_transpct{0.00 a}'       ),
+        ( 'Other Sources', '@other_rc{0.00 a}'     )
     ],
 
     # display a tooltip whenever the cursor is vertically in line with a glyph
@@ -1900,9 +2039,9 @@ hover_taxnon = HoverTool(
     tooltips=[
     ( 'Year',   '@year'            ),
     ( 'Trade Taxes', '@yy3{0.00 a}%'      ),
-	( 'Goods and Services Taxes', '@yy2{0.00 a}%'),
-	( 'Other Taxes', '@yy1{0.00 a}%'       ),
-	( 'Income Taxes', '@yy0{0.00 a}%'       )
+    ( 'Goods and Services Taxes', '@yy2{0.00 a}%'),
+    ( 'Other Taxes', '@yy1{0.00 a}%'       ),
+    ( 'Income Taxes', '@yy0{0.00 a}%'       )
     ],
 
     # display a tooltip whenever the cursor is vertically in line with a glyph
@@ -1917,9 +2056,9 @@ def update_taxdatarc():
 
     # Soruces for line graph
     source.data = {
-		'Country'             : selected.countryname,
-		'Year'           : selected.year,
-		'Resource' : selected.tot_resource_revpct,
+        'Country'             : selected.countryname,
+        'Year'           : selected.year,
+        'Resource' : selected.tot_resource_revpct,
         'Income' : selected.direct_inc_sc_ex_resource_revpct,
         'GandS' : selected.tax_g_spct,
         'Trade' : selected.tax_int_trade_transpct,
@@ -1947,8 +2086,8 @@ def update_taxdata_nonrc():
 
     # Soruces for line graph
     source.data = {
-		'Country'             : selected.countryname,
-		'Year'           : selected.year,
+        'Country'             : selected.countryname,
+        'Year'           : selected.year,
         'Income' : selected.direct_inc_scpct,
         'GandS' : selected.tax_g_spct,
         'Trade' : selected.tax_int_trade_transpct,
@@ -1980,7 +2119,7 @@ columns_tax_nonrc = [
 # Generate Widgets
 min_yearSET = Select(title="Start Year", options=sorted(axis_year.keys()), value="1991")
 max_yearSET = Select(title="End Year", options=sorted(axis_year.keys()), value="2016")
-fontSET = Select(title="Title Font Size", options=sorted(axis_font.keys()), value="14")
+fontSET = Select(title="Title Font Size", options=sorted(axis_font.keys()), value="18")
 title_name_emp = TextInput(title="Title - Employment Share", value="Employment Share Over Time 1990-2016")
 
 
@@ -2055,7 +2194,7 @@ def create_figure_emp():
 
     try:
         # create figure
-        p= figure(x_range=(m, M), y_range=(0, 100), plot_height=800, plot_width=950)
+        p= figure(x_range=(m, M), y_range=(0, 100), plot_height=675, plot_width=800)
 
         # Generate stacked plot
         areas = stacked(df)
@@ -2068,7 +2207,7 @@ def create_figure_emp():
         p.line(x='year', y='yy0',source=source, color='#016450', line_width=.2)
 
         # Generate legend outside the plot.
-        names = ['Agiculture','Contruction', 'Manufacturing', 'Mining',  'Other', 'Retail', 'Transportation']
+        names = ['Agriculture','Contruction', 'Manufacturing', 'Mining',  'Other', 'Retail', 'Transportation']
         labels = []
         for i, area in enumerate(areas):
             r = p.patch(x2, areas[area], color=color_blender[i], alpha=0.8, line_color=None)
@@ -2107,9 +2246,9 @@ hover_emp = HoverTool(
     tooltips=[
         ( 'Year',   '@year' ),
         ( 'Transportation', '@yy6{0.0 a}%'),
-	    ( 'Retail', '@yy5{0.0 a}%' ),
-	    ( 'Other', '@yy4{0.0 a}%'       ),
-	    ( 'Mining', '@yy3{0.0 a}%'       ),
+        ( 'Retail', '@yy5{0.0 a}%' ),
+        ( 'Other', '@yy4{0.0 a}%'       ),
+        ( 'Mining', '@yy3{0.0 a}%'       ),
         ( 'Manufacturing', '@yy2{0.0 a}%'        ),
         ( 'Contruction', '@yy1{0.0 a}%'      ),
         ( 'Agriculture', '@yy0{0.0 a}%'       )
@@ -2195,7 +2334,7 @@ def create_figure_gva():
 
     try:
         # Create figure
-        p = figure(x_range=(m, M), y_range=(0, 100), plot_height=800, plot_width=950)
+        p = figure(x_range=(m, M), y_range=(0, 100), plot_height=675, plot_width=800)
 
 
         # Generate area chart
@@ -2209,7 +2348,7 @@ def create_figure_gva():
 
 
         ### Add legends outside the plot.
-        names = ['Agiculture','Contruction', 'Manufacturing', 'Mining',  'Other', 'Retail', 'Transportation']
+        names = ['Agriculture','Contruction', 'Manufacturing', 'Mining',  'Other', 'Retail', 'Transportation']
         labels = []
         for i, area in enumerate(areas):
             r = p.patch(x2, areas[area], color=color_blender[i], alpha=0.8, line_color=None)
@@ -2246,9 +2385,9 @@ hover_gva = HoverTool(
     tooltips=[
         ( 'Year',   '@year'            ),
         ( 'Transportation', '@yy6{0.0 a}%'      ),
-	( 'Retail', '@yy5{0.0 a}%' ),
-	( 'Other', '@yy4{0.0 a}%'       ),
-	( 'Mining', '@yy3{0.0 a}%'       ),
+    ( 'Retail', '@yy5{0.0 a}%' ),
+    ( 'Other', '@yy4{0.0 a}%'       ),
+    ( 'Mining', '@yy3{0.0 a}%'       ),
         ( 'Manufacturing', '@yy2{0.0 a}%'        ),
         ( 'Contruction', '@yy1{0.0 a}%'      ),
         ( 'Agriculture', '@yy0{0.0 a}%'       )
@@ -2269,19 +2408,11 @@ hover_gva = HoverTool(
 # Add Widgets
 minavyear = Select(title="Change in Employment Share Mean - Start Year", options=sorted(axis_year.keys()), value="2008")
 maxavyear = Select(title="Change in Employment Share Mean - End Year", options=sorted(axis_year.keys()), value="2016")
-font_relemp = Select(title="Title Font Size", options=sorted(axis_font.keys()), value="14")
+font_relemp = Select(title="Title Font Size", options=sorted(axis_font.keys()), value="24")
 note_relemp = TextInput(title="Additional Note Content", value="")
-title_relemp = TextInput(title="Title - Employment Share", value="Changes in Employment Share - Over Time")
-mining = RadioButtonGroup(labels=["Mining", "Without Mining"], active=0, width=250)
+title_relemp = TextInput(title="Title - Employment Share", value="Measure of Economic Transformation")
+mining = RadioButtonGroup(labels=["Mining", "Without Mining"], active=1, width=250)
 
-# Generate HoverTool
-hover_relemp = HoverTool(name='circle',
-                         tooltips=
-                         [('Country', '@countryname'),
-                          ('Industry', '@Industry'),
-                          ('Change in Employment Share', '@empave{0.0 a}%'),
-                          ('Relative Labour Productivity', '@relLP{0.0 a}'),
-                          ('Share of Total Employment', '@ES{0.0 a}%')])
 
 
 # Select observations to plot
@@ -2413,6 +2544,7 @@ def select_obs_relemp():
 
 
 ### Create the plot
+
 def create_figure_relemp():
 
     # select data
@@ -2425,23 +2557,23 @@ def create_figure_relemp():
 
         try:
             # create plot
-            p = figure(plot_height=700, plot_width=850, title="",  background_fill_color="#eeeafa")
+            p = figure(plot_height=700, plot_width=850, title="",  background_fill_color=background_color)
 
 
             # Regression of rel against employment changes.
             regression1 = np.polyfit(source.data['empave'], source.data['relLP'], 1)
             x_1, y_1 = zip(*((i, i*regression1[0] + regression1[1]) for i in range(int(min(source.data['empave'])), int(max(source.data['empave'])))))
             # plot regression line
-            p.line(x=x_1, y=y_1, color='#999999', line_width=5, name='regline')
+            r = p.line(x=x_1, y=y_1, color='#999999', line_width=5, name='regline')
 
 
             # plot observations - size refers to
-            p.circle(x= 'empave', y= 'relLP', fill_alpha=0.6, source=source, size = 'ES_scale',
-                    color=dict(field='index', transform=CategoricalColorMapper(factors=source.data['index'], palette=SET_palette)), legend=None, name='circle')
+            s = p.circle(x= 'empave', y= 'relLP', fill_alpha=0.85,  line_width=3, source=source, size = 'ES_scale', line_color='white',
+                    fill_color=dict(field='index', transform=CategoricalColorMapper(factors=source.data['index'], palette=SET_palette)), legend=None, name='circle')
 
 
             # Make lables for the circles
-            labels = LabelSet(x='empave', y='relLP', text='Industry', level='glyph', x_offset=5, y_offset=5, source=source, render_mode='canvas')
+            labels = LabelSet(x='empave', y='relLP', text='Industry', text_font='arial', text_font_style='bold', text_color='DarkGrey',text_font_size='16pt', level='glyph', x_offset=6, y_offset=6, source=source, render_mode='canvas', )
             p.add_layout(labels)
 
 
@@ -2468,6 +2600,19 @@ def create_figure_relemp():
             p.yaxis.axis_label = 'Relative Labour Productivity ('+maxavyear.value+')'
             p.legend.orientation = "vertical"
             p.xgrid.visible = True
+            p.grid.grid_line_alpha=0.4
+
+            # Generate HoverTool
+            hover_relemp = HoverTool(name='circle',
+                                    renderers = [s],
+                                     tooltips=
+                                     [('Country', '@countryname'),
+                                      ('Industry', '@Industry'),
+                                      ('Change in Employment Share', '@empave{0.0 a}%'),
+                                      ('Relative Labour Productivity', '@relLP{0.0 a}'),
+                                      ('Share of Total Employment', '@ES{0.0 a}%')])
+
+
 
             # Add the HoverTool to the plot
             p.add_tools(hover_relemp)
@@ -2503,7 +2648,7 @@ columns_relemp = [
 
 
 relyear = Select(title="Year", options=sorted(axis_year.keys()), value="2016")
-font_relbar = Select(title="Title Font Size", options=sorted(axis_font.keys()), value="14")
+font_relbar = Select(title="Title Font Size", options=sorted(axis_font.keys()), value="24")
 note_relbar = TextInput(title="Additional Note Content", value="")
 
 # Choose the title of the relbar visual
@@ -2539,6 +2684,7 @@ def select_obs_relbar():
                 'relLP_Construction': [],
                 'relLP_Transportation': [],
                 'relLP_Manufacturing': []}
+
     for result in connection.execute(stmt):
         ES['ES_Agriculture'].append(result.Var73)
         ES['ES_Manufacturing'].append(result.Var92)
@@ -2556,26 +2702,31 @@ def select_obs_relbar():
         REL['relLP_Other'].append(result.Var51)
 
 
-
-    types = ['Agriculture','Construction', 'Manufacturing' ,'Mining',   'Retail', 'Transportation', 'Other']
+    types = ['Agriculture','Construction','Manufacturing', 'Mining','Other',  'Retail',  'Transportation' ]
 
     data = []
     for row in pd.DataFrame(ES).iterrows():
+        print(row)
         index, d = row
+        print(d.tolist())
         data.append(d.tolist())
 
 
-    top =[]
+    top = []
     for row in pd.DataFrame(REL).iterrows():
+        print(row)
         index, d = row
+        print(d.tolist())
         top.append(d.tolist())
 
     dictionary = {'top': top[0],
                 'data': data[0],
                 'names': types}
-
+    print(dictionary)
     dataset = pd.DataFrame(dictionary)
+    print(dataset)
     dataset.sort_values('top', inplace=True)
+    print(dataset)
 
     if mining.active ==1:
         dataset = dataset[dataset.names != 'Mining']
@@ -2605,14 +2756,14 @@ def create_figure_relbar():
 
 
         # generate plot.
-        p = figure(plot_height=700, plot_width=850, title="",  background_fill_color="#eeeafa")
+        p = figure(plot_height=700, plot_width=850, title="",  background_fill_color=background_color)
 
 
         labels = []
         # Plot
         for i in range(0,len(top)):
             r = p.quad(top=top[i], bottom=bottom[i], left=left[i],
-                   right=right[i], color=SET_palette[i], name =names[i]
+                   right=right[i], color=SET_palette[i], name =names[i],
                   )
             # add a legend id for each bar.
             labels.append(LegendItem(label=dict(value=names[i]), renderers=[r]))
@@ -2643,18 +2794,9 @@ def create_figure_relbar():
         p = Div(text='<style>\np {\n    font: "arial", arial;\n    text-align: justify;\n    text-justify: inter-word;\n    max-width: 500;\n}\n\n\n\n</style>\n\n<p>\n' +CountrySTRUC.value +' records insufficient data for country/indicator selection. Please reselect country/indicator options.\n</p>\n', width=900)
 
 
-
-
     return p
 
 
-#columns_relbar = [
-#    TableColumn(field="countryname", title="Country"),
-#    TableColumn(field="Industry", title="Year"),
-#    TableColumn(field="empave", title='Average Employment Over Time-Period Chosen'),
-#    TableColumn(field="relLP", title='Relative Labour Productivity at End Year')
-
-#]
 
 #####################################################################
 #####################################################################
@@ -2700,65 +2842,71 @@ note_LP = TextInput(title="Additional Note Content - Line 1", value="")
 order_barLP = RadioButtonGroup(labels=["Ascending", "Descending"], active=0, width=250)
 bar_widthLP = Slider(title='Width of Bars', start=0.05, end=.5, value=0.2, step=.025)
 group_yearsLP = Select(title="Year Groupings", options=sorted(axis_groupyear.keys()), value="5")
-LP_variables = MultiSelect(title="Sector Selections", value=sector_list,options=LPList)
+LP_variables = MultiSelect(title="Sector Selections", value=sector_list,options=LPList, size=8)
 order_barLP = RadioButtonGroup(labels=["Ascending", "Descending"], active=0, width=250)
 
 
 
 # Select observations
 def select_obs_withinLP():
-    country_vals = LPcountries.value
+    try:
+        country_vals = LPcountries.value
 
-    # Select the Correct Observations
-    stmt = stmt_main.where(and_(
-        data_table.columns.countryname.in_(country_vals),
-        data_table.columns.year.between(int(minyear_LP.value),int(maxyear_LP.value))))
-
-
-
-    LP = axis_map_withinbtw2[LP_var.value]
-
-    if LP_var.value=='Total':
-        dictionary = {'countryname':[],
-                    'year': []}
-        for i in LP:
-            for g in i:
-                dictionary[g] = []
+        # Select the Correct Observations
+        stmt = stmt_main.where(and_(
+            data_table.columns.countryname.in_(country_vals),
+            data_table.columns.year.between(int(minyear_LP.value),int(maxyear_LP.value))))
 
 
-        LPS = LP[0]+LP[1]
 
-        for result in connection.execute(stmt):
-            dictionary['countryname'].append(result.countryname)
-            dictionary['year'].append(result.year)
-            for i in range(0, len(LPS)):
+        LP = axis_map_withinbtw2[LP_var.value]
 
-                dictionary[LPS[i]].append(result[LPS[i]])
-
-        data = pd.DataFrame(dictionary)
-
-
-        data[0] = data[LP[0]].sum(axis=1)
-        data[1] = data[LP[1]].sum(axis=1)
-        data = data[['countryname', 'year', 0, 1]]
-        data.sort_values(['countryname', 'year'], inplace=True)
+        if LP_var.value=='Total':
+            dictionary = {'countryname':[],
+                        'year': []}
+            for i in LP:
+                for g in i:
+                    dictionary[g] = []
 
 
-    else:
-        dictionary = {'countryname': [],
-                    #'countryname': [],
-                    LP[0]: [],
-                    LP[1]: [],
-                    'year':[]}
-        for result in connection.execute(stmt):
-            #dictionary['countrycode'].append(result.countrycode)
-            dictionary['countryname'].append(result.countryname)
-            dictionary['year'].append(result.year)
-            dictionary[LP[0]].append(result[LP[0]])
-            dictionary[LP[1]].append(result[LP[1]])
+            LPS = LP[0]+LP[1]
 
-        data = pd.DataFrame(dictionary)
+            for result in connection.execute(stmt):
+                dictionary['countryname'].append(result.countryname)
+                dictionary['year'].append(result.year)
+                for i in range(0, len(LPS)):
 
+                    dictionary[LPS[i]].append(result[LPS[i]])
+
+            data = pd.DataFrame(dictionary)
+
+
+            data[0] = data[LP[0]].sum(axis=1)
+            data[1] = data[LP[1]].sum(axis=1)
+            data = data[['countryname', 'year', 0, 1]]
+            data.sort_values(['countryname', 'year'], inplace=True)
+            data = data.dropna()
+            data.sort_values(['countryname', 'year'], inplace=True)
+
+        else:
+            dictionary = {'countryname': [],
+                        #'countryname': [],
+                        LP[0]: [],
+                        LP[1]: [],
+                        'year':[]}
+            for result in connection.execute(stmt):
+                #dictionary['countrycode'].append(result.countrycode)
+                dictionary['countryname'].append(result.countryname)
+                dictionary['year'].append(result.year)
+                dictionary[LP[0]].append(result[LP[0]])
+                dictionary[LP[1]].append(result[LP[1]])
+
+            data = pd.DataFrame(dictionary)
+            data = data.dropna()
+            data.sort_values(['countryname', 'year'], inplace=True)
+
+    except:
+        data=pd.DataFrame()
     return data
 
 
@@ -2776,13 +2924,12 @@ def create_figure_withinbtw():
         groups =  int(group_yearsLP.value)
 
         ##### Generate the group vars
-        data[LP[0]] = data.groupby(['countryname'])[LP[0]].apply(pd.rolling_mean, groups, min_periods=groups)
-        data[LP[1]] = data.groupby(['countryname'])[LP[1]].apply(pd.rolling_mean, groups, min_periods=groups)
+        data[LP[0]] = data.groupby(['countryname'])[LP[0]].apply(lambda x:x.rolling(center=False,window=groups, min_periods=groups).mean())
+        data[LP[1]] = data.groupby(['countryname'])[LP[1]].apply(lambda x:x.rolling(center=False,window=groups, min_periods=groups).mean())
 
         ### Drop the early years without previous records for means.
         data['year'] = data['year'].astype(int)
         data.dropna(inplace=True)
-
 
         # Generate basic years list
         years1 = list(data['year'].unique())
@@ -2823,12 +2970,12 @@ def create_figure_withinbtw():
 
         # Explore wet
 
-        SET_palette = ['#361c7f','#9467bd', '#b35900', '#990000'] + Category20[20]
+        SET_palette = ['#361c7f','#9467bd',  '#c49c51', '#c84f46', 'white', '#287abb'] + Category20[20]
         sources  = {}
         for i, d in dictionary.items():
             sources[i] = ColumnDataSource(data=d)
 
-        p = figure(x_range=dictionary[C_list[0]]['years'], title="Attempts at ", plot_height=800, plot_width=900,  background_fill_color="#eeeafa")
+        p = figure(x_range=dictionary[C_list[0]]['years'], title="Attempts at ", plot_height=800, plot_width=900,  background_fill_color=background_color)
 
         legend_it = []
 
@@ -2844,14 +2991,14 @@ def create_figure_withinbtw():
         for i in range(0, len(C_list)):
 
             #Create the within plot
-            c = p.vbar(x=dodge('years', spacing[i], range=p.x_range), top='Within', width=bar_widthLP.value, source=sources[C_list[i]], fill_alpha=0.65,
+            c = p.vbar(x=dodge('years', spacing[i], range=p.x_range), top='Within', width=bar_widthLP.value, source=sources[C_list[i]], fill_alpha=0.85, line_width=3,
                    color=SET_palette[n], name="Within " +LP_var.value+' Growth: '+C_list[i])
             legend_it.append(("Within " +LP_var.value+' Growth: '+C_list[i], [c]))
             names.append("Within " +LP_var.value+' Growth: '+C_list[i])
             n +=1
 
             # Plot Between on top of the within plot
-            c = p.vbar(x=dodge('years',  spacing[i],  range=p.x_range), top='Between', width=bar_widthLP.value, source=sources[C_list[i]], fill_alpha=0.65,
+            c = p.vbar(x=dodge('years',  spacing[i],  range=p.x_range), top='Between', width=bar_widthLP.value, source=sources[C_list[i]], fill_alpha=0.85, line_width=3,
                    color=SET_palette[n], name= "Between " +LP_var.value+' Growth: '+C_list[i])
             n +=1
             legend_it.append(("Between " +LP_var.value+' Growth: '+C_list[i], [c]))
@@ -2963,7 +3110,7 @@ def create_figure_annualLP():
 
         ##### Generate the group vars
         for var in var_list:
-            data[var]= data.groupby(['countryname'])[var].apply(pd.rolling_mean, groups, min_periods=groups)
+            data[var]= data.groupby(['countryname'])[var].apply(lambda x:x.rolling(center=False,window=groups, min_periods=groups).mean())
 
 
         ### Drop the early years without previous records for means.
@@ -2991,12 +3138,12 @@ def create_figure_annualLP():
 
 
 
-        SET_palette = ['#361c7f','#9467bd', '#b35900', '#990000'] + Category20[20]
+        SET_palette = ['#361c7f','#9467bd',  '#c49c51', '#c84f46', 'white', '#287abb'] + Category20[20]
 
 
         sourceLP = ColumnDataSource(data)
 
-        p = figure(x_range=list(data['year'].as_matrix()), plot_width=900, plot_height=700,  background_fill_color="#eeeafa")
+        p = figure(x_range=list(data['year'].as_matrix()), plot_width=900, plot_height=700,  background_fill_color=background_color)
 
         legend_it = []
 
@@ -3016,7 +3163,7 @@ def create_figure_annualLP():
         names = []
 
         for i in range(0, len(var_list)):
-            c = p.vbar(x=dodge('year', spacing[i], range=p.x_range), top=var_list[i], width=bar_widthLP.value, source=sourceLP, fill_alpha=0.65,
+            c = p.vbar(x=dodge('year', spacing[i], range=p.x_range), top=var_list[i], width=bar_widthLP.value, source=sourceLP, fill_alpha=0.75, line_width=3,
                    color=SET_palette[n], name = var_list[i])
             legend_it.append((var_list[i], [c]))
             names.append(var_list[i])
@@ -3051,7 +3198,7 @@ def create_figure_annualLP():
         # Plot specfic settings
         p.title.text = title_LP.value
         p.title.text_font_size = font_LP.value + 'pt'
-        p.grid.grid_line_alpha=0.3
+        #p.grid.grid_line_alpha=0
         p.xaxis.axis_label=''
         p.yaxis.axis_label='Annualised Change in Labour Productivity'
 
@@ -3078,9 +3225,9 @@ def create_figure_annualLP():
 
 # Generate the Widgets
 GDP = Slider(title="Maximum GDP Per Capita (Thousands)", value=40000, start=0, end=40000, step=2000)
-minyear = Select(title="Start Year", options=sorted(axis_year.keys()), value="1991")
+minyear = Select(title="Start Year", options=sorted(axis_year.keys()), value="2016")
 maxyear = Select(title="End Year", options=sorted(axis_year.keys()), value="2016")
-font_scatter = Select(title="Title Font Size", options=sorted(axis_font.keys()), value="14")
+font_scatter = Select(title="Title Font Size", options=sorted(axis_font.keys()), value="26")
 #Country_sc = TextInput(title="Country")
 x_axis  = Select(title="X Axis", options=sorted(axis_map_notes.keys()), value="Proportion of Employment (%): Agriculture")
 y_axis = Select(title="Y Axis", options=sorted(axis_map_notes.keys()), value="GDP per capita (constant 2010 US$) (thousands)")
@@ -3092,37 +3239,12 @@ note_scatter = TextInput(title="Additional Note Content", value='')
 # Generate HoverTool
 hover_scatter = HoverTool(tooltips=[('Country', '@countryname'),
                            ('Year', '@year'),
-			   ('X Value', '@xx{0.00 a}'),
-			   ('Y Value', '@yy{0.00 a}')])
-
-# Generate the Blank Source
-source = ColumnDataSource(data=dict(countryname = [] , xx= [], yy= [], year= [], color=[], OECD_norm=[]))
-source1 = ColumnDataSource(data=dict(rx = [], ry =[]))
-#source2 = ColumnDataSource(data=dict(r2x = [], r2y =[]))
-
-# Create Button which Downloads CSV file
-button = Button(label="Download Data", button_type="success")
-button.callback = CustomJS(args=dict(source=source),
-                           code=open(join(dirname(__file__), 'models', 'download.js')).read())
-
-
-# Generate the Plot
-
-t = figure(plot_height=900, plot_width=900, background_fill_color="#eeeafa")
-t.circle(x= 'xx', y= 'yy', fill_alpha=0.5, source=source,
-        color='color', size = 10, legend='OECD_norm', name='scatter')
-
-t.line(x='rx', y='ry', color='#999999', line_width=5, source=source1,name='regline')
-#t.line(x='r2x', y='r2y', color='#999999', line_width=5, source=source2)
-
-
-# Add SET formatting to the plot
-t = SET_style(t)
+               ('X Value', '@xx{0.00 a}'),
+               ('Y Value', '@yy{0.00 a}')])
 
 
 
-# Callback which updates the underlying data of the plot.
-def update_sc():
+def select_obs_scatter():
     minyeara = int(minyear.value)
     maxyeara = int(maxyear.value)
     x_name = axis_map_notes[x_axis.value][0]
@@ -3152,10 +3274,12 @@ def update_sc():
 
     selected= pd.DataFrame(dictionary)
 
-    selected["color"] = np.where(selected["OECD_fragile"] == 'Within OECD Index', '#b35900', '#361c7f' )
-
+    selected["color"] = np.where(selected["OECD_fragile"] == 'Within OECD Index', '#c84f46', '#361c7f' )
 
     selected.dropna(inplace=True)
+
+    source = ColumnDataSource(data=dict(countryname = [] , xx= [], yy= [], year= [], color=[], OECD_norm=[]))
+
     source.data = dict(
         #countrycode = selected['countrycode'],
         countryname = selected['countryname'],
@@ -3165,19 +3289,83 @@ def update_sc():
         color = selected['color'],
         OECD_norm = selected['OECD_fragile'])
 
-    # simple linear regression
     regression1 = np.polyfit(selected[x_name], selected[y_name], 1)
     x_1, y_1 = zip(*((i, i*regression1[0] + regression1[1]) for i in range(int(min(selected[x_name])), int(max(selected[x_name])))))
 
     # attempt at quadratic.  works but plotting will not work - fix later.
     #regression2 = np.polyfit(selected[x_name], selected[y_name], 2)
     #x2_1, y2_1 = zip(*((i, i*(regression2[0]**2)+i*regression2[1]+regression2[2]) for i in range(int(min(selected[x_name])), int(max(selected[x_name])))))
-
+    source1 = ColumnDataSource(data=dict(rx = [], ry =[]))
     # source data for regression.
     source1.data = dict(
         rx = x_1,
         ry = y_1
     )
+
+
+    return {'source' : source, 'source1': source1}
+
+
+# define function to make hexbin scatter plot
+def CGD_hexbin(data, x_var, y_var, color, tooltips, CGD_2):
+    x = data[x_var].as_matrix()
+    y = data[y_var].as_matrix()
+
+    # column source data for the scatter plot
+    source = ColumnDataSource(data)
+
+    # Create the plot background
+    p = figure(title="", match_aspect=True, plot_width=700, plot_height=700,
+          background_fill_color='#383951')
+    # Make the hexbinds for the background
+    r, bins = p.hexbin(x, y, size=10, palette = CGD_2, hover_color='#7e88a6', hover_alpha=0.8)
+
+    # Regression of rel against employment changes.
+    regression1 = np.polyfit(source.data[x_var], source.data[y_var], 1)
+    x_1, y_1 = zip(*((i, i*regression1[0] + regression1[1]) for i in range(int(min(source.data[x_var])), int(max(source.data[x_var])))))
+    # plot regression line
+    p.line(x=x_1, y=y_1, color='#999999', line_width=5, name='regline', line_alpha=0.6 )
+
+    # Plot the scatter by color
+    s = p.circle(x_var, y_var, line_color="white", color=color, line_width=1.5, size=15, name='cicle', source=source)
+    # hover plot for the scatter plot
+    hover = HoverTool(tooltips=tooltips,
+                      mode="mouse", point_policy="follow_mouse", renderers=[s])
+    p.add_tools(hover)
+
+    # Plot Formatting
+    p = CGD_format(p)
+    p.grid.visible = False
+    p.title.text = 'Key health outcomes correlate with economic structure'
+    p.xaxis.axis_label = 'Proportion of value-added in agriculture (%)'
+    p.yaxis.axis_label = 'Percentage of total deaths (%)'
+    return(p)
+
+
+
+# create figure
+def create_figure_scatter():
+    data = select_obs_scatter()
+
+    # background_colors for hexbin
+    CGD_2 = ['#41425e', '#596682', '#7f8ca8', '#aaaaaa', '#d3d3d3']# pl
+    t = figure(plot_height=700, plot_width=700, background_fill_color='#383951')
+
+
+    # Make the hexbinds for the background
+    #r, bins = t.hexbin(data['source'].data['xx'], data['source'].data['yy'], palette = CGD_2, hover_color='#7e88a6', hover_alpha=0.8)
+
+
+
+    s = t.circle(x= 'xx', y= 'yy', fill_alpha=0.85, source=data['source'],
+            line_color='white', line_width=3, fill_color='color', size = 17, legend='OECD_norm', name='scatter')
+
+    a = t.line(x='rx', y='ry', color='#999999', line_width=5, source=data['source1'],name='regline')
+    #t.line(x='r2x', y='r2y', color='#999999', line_width=5, source=source2)
+
+    # Add SET formatting to the plot
+    t = SET_style(t)
+
 
     # plot settings
     t.title.text = title_name.value #+": %d observations " % len(df)
@@ -3185,18 +3373,27 @@ def update_sc():
     t.title.text_font_size = fontvalue
     t.xaxis.axis_label = x_axis.value
     t.yaxis.axis_label = y_axis.value
-    t.legend.background_fill_alpha = 0.3
+    t.xgrid.visible = True
+    t.legend.background_fill_alpha = 0.5
     t.legend.label_text_font_size = '14pt'
+    t.grid.grid_line_alpha=0.4
 
 
+    # Add the Tool to the plot
+    t.add_tools(hover_scatter)
 
-# Add the Tool to the plot
-t.add_tools(hover_scatter)
+    return t
+
+
+# Create Button which Downloads CSV file
+button = Button(label="Download Data", button_type="success")
+button.callback = CustomJS(args=dict(source=select_obs_scatter()['source']),
+                           code=open(join(dirname(__file__), 'models', 'download.js')).read())
 
 
 
 #Load the Initial Plot
-update_sc()
+#update_sc()
 
 
 
@@ -3233,7 +3430,7 @@ header = Div(text=open(join(dirname(__file__), 'tops', 'header.html')).read(), w
 ##########################################################################
 
 ####### Choose the Section of plots:
-Subject_choice =  RadioButtonGroup(labels=['Country/Group Comparison',"Employment and GVA Composition",'Labour Productivity', "Structural Economic Change",  'Trade',], active=0, width=900)
+Subject_choice =  RadioButtonGroup(labels=['Country/Group Comparison',"Employment and GVA Composition",'Labour Productivity', "Structural Economic Change",  'Trade', 'Firm-Level'], active=2, width=1200)
 
 
 ###########################################################
@@ -3243,15 +3440,15 @@ Subject_choice =  RadioButtonGroup(labels=['Country/Group Comparison',"Employmen
 
 #### Structual Transformation
 #axis_map_EMP = { "Area Chart - Employment and GVA Composition": "empgva"}
-		     #"Scatter - Changes in Employment Composition and Relative LP": "empave",
-		#'Tax Revenue Composition': 'tax_area'}
+             #"Scatter - Changes in Employment Composition and Relative LP": "empave",
+        #'Tax Revenue Composition': 'tax_area'}
 #Plot_EMP = Select(title='Type of Plot', options=sorted(axis_map_EMP.keys()), value="Area Chart - Employment and GVA Composition")
 
 Plot_EMP =  RadioButtonGroup(labels=['Area Chart - Employment and GVA Composition'], active=0, width=900)
 
 #### Labour Productivity Charts :
 #axis_map_LP = {"Between/Within Labour Productivity": "Bar - Between/Within Labour Productivity",
-#	       "Changes in Labour Productivity (Annualised)": "Bar - Between/Within Labour Productivity",}
+#           "Changes in Labour Productivity (Annualised)": "Bar - Between/Within Labour Productivity",}
 #Plot_LP = Select(title='Type of Plot', options=sorted(axis_map_LP.keys()), value='Between/Within Labour Productivity')
 Plot_LP =  RadioButtonGroup(labels=['Between/Within Labour Productivity', "Changes in Labour Productivity (Annualised)"], active=0, width=900)
 
@@ -3264,7 +3461,7 @@ Plot_TRADE =  RadioButtonGroup(labels=["Area Chart - Composition of Exports"], a
 #### Firm Charts
 #axis_map_firm = {"Currently no visuals are available" : 'none'}
 #Plot_FIRM = Select(title='Type of Plot', options=sorted(axis_map_firm.keys()), value='Currently no visuals are available')
-Plot_FIRM =  RadioButtonGroup(labels=["Currently no visuals are available"], active=0, width=900)
+Plot_FIRM =  RadioButtonGroup(labels=["Kernel Distribution Analysis"], active=0, width=900)
 
 
 #### Cross-sectional Charts Charts :
@@ -3274,13 +3471,13 @@ Plot_FIRM =  RadioButtonGroup(labels=["Currently no visuals are available"], act
 #                'Bar Chart - Comparison': 'Bar',
 #                'Growth Heatmap - Finding Successful Cases': 'heatmap'}
 #Plot_CROSS = Select(title='Type of Plot', options=sorted(axis_map_cross.keys()), value='Line Chart - Time Series')
-Plot_CROSS =  RadioButtonGroup(labels=['Bar Chart', 'Box-and-Whisker Plot','Growth Heatmap', 'Line Chart', "Scatter", ], active=3, width=900)
+Plot_CROSS =  RadioButtonGroup(labels=['Bar Chart','Box-and-Whisker Plot', 'Growth Heatmap', 'Line Chart', "Scatter" ], active=3, width=900)
 
 #### Structual Transformation
 #axis_map_STRUC = {#
-#		     "Scatter - Changes in Employment Composition and Relative LP": "empave",
+#             "Scatter - Changes in Employment Composition and Relative LP": "empave",
 #             "Bar - Employment Composition and Relative LP": "empave"}
-		#'Tax Revenue Composition': 'tax_area'}
+        #'Tax Revenue Composition': 'tax_area'}
 #Plot_STRUC = Select(title='Type of Plot', options=sorted(axis_map_STRUC.keys()), value="Scatter - Changes in Employment Composition and Relative LP")
 Plot_STRUC =  RadioButtonGroup(labels=["Bar - Employment Composition and Relative LP", "Scatter - Changes in Employment Composition and Relative LP", ], active=1, width=900)
 
@@ -3309,49 +3506,51 @@ First_choices = widgetbox()
 # Generate the inital layout to be altered.
 
 layout = layout([[intro_portal],
-		[],
-		[header],
-		[],
-		[],
-		[],
-		[],
-		[exit]])
+        [],
+        [header],
+        [],
+        [],
+        [],
+        [],
+        [exit]])
 
 
 UPDATE= Button(label="Update", button_type="success")
 # Update the heading choices when the subject widgets changes
 def update_start():
-	print('here')
-	if Subject_choice.active==1:
-		layout.children[1] = widgetbox(Subject_choice)
-		layout.children[3] = widgetbox(Plot_EMP)
-		update_plot_EMP()
-	elif Subject_choice.active==2:
-		layout.children[1] = widgetbox( Subject_choice)
-		layout.children[3] = widgetbox(Plot_LP)
-		update_plot_LP()
-	elif Subject_choice.active==4:
-		layout.children[1] = widgetbox(Subject_choice)
-		layout.children[3] = widgetbox(Plot_TRADE)
-		update_plot_TRADE()
-	#elif Subject_choice.active==5:
-		#layout.children[1] = widgetbox( Subject_choice,Plot_FIRM)
-		#update_plot_FIRM()
-	elif Subject_choice.active==0:
-		layout.children[1] = widgetbox(Subject_choice)
-		layout.children[3] = widgetbox(Plot_CROSS)
-		update_plot_CROSS()
-		print('here2')
-	#elif Subject_choice.active==6:
-		#layout.children[1] = widgetbox( Subject_choice, Plot_TAX)
-		#update_plot_TAX()
-	elif Subject_choice.active==3:
-		layout.children[1] = widgetbox(Subject_choice)
-		layout.children[3] = widgetbox(Plot_STRUC)
-		update_plot_STRUC()
+    if Subject_choice.active==1:
+        layout.children[1] = widgetbox(Subject_choice)
+        layout.children[3] = widgetbox(Plot_EMP)
+        update_plot_EMP()
+    elif Subject_choice.active==2:
+        layout.children[1] = widgetbox( Subject_choice)
+        layout.children[3] = widgetbox(Plot_LP)
+        update_plot_LP()
+    elif Subject_choice.active==4:
+        layout.children[1] = widgetbox(Subject_choice)
+        layout.children[3] = widgetbox(Plot_TRADE)
+        update_plot_TRADE()
+    elif Subject_choice.active==5:
+        layout.children[1] = widgetbox( Subject_choice,Plot_FIRM)
+        update_plot_FIRM()
+    elif Subject_choice.active==0:
+        layout.children[1] = widgetbox(Subject_choice)
+        layout.children[3] = widgetbox(Plot_CROSS)
+        update_plot_CROSS()
 
-	else:
-		print('there is something wrong')
+    #elif Subject_choice.active==6:
+        #layout.children[1] = widgetbox( Subject_choice, Plot_TAX)
+        #update_plot_TAX()
+    elif Subject_choice.active==3:
+        layout.children[1] = widgetbox(Subject_choice)
+        layout.children[3] = widgetbox(Plot_STRUC)
+        update_plot_STRUC()
+    elif Subject_choice.active==5:
+        layout.children[1] = widgetbox(Subject_choice)
+        layout.children[3] = widgetbox(Plot_FIRM)
+        update_plot_FIRM()
+    else:
+        print('there is something wrong')
 
 
 ###############################################################################
@@ -3359,162 +3558,167 @@ def update_start():
 ###############################################################################
 
 def update_plot_EMP():
-	# Generate the Area Chart - Employment/GVA
-	print('EMPGVA')
-	if Plot_EMP.active==0:
-		print('Employ')
-		# Text heading
-		layout.children[4] = Div(text=open(join(dirname(__file__), 'tops', 'intro_areaempgva.html')).read(), width=900)
-		# Widgets
-		layout.children[5] = row(widgetbox(CountryEMP, title_name_emp, title_name_gva), widgetbox(fontSET, min_yearSET, max_yearSET))
-		# Plot
-		layout.children[6] = Tabs(tabs=[Panel(child=create_figure_emp(), title='Employment'), Panel(child=create_figure_gva(), title='Gross Value Added')])
+    # Generate the Area Chart - Employment/GVA
+
+    if Plot_EMP.active==0:
+
+        # Text heading
+        layout.children[4] = row(Div(text=open(join(dirname(__file__), 'tops', 'intro_areaempgva.html')).read(), width=900))
+        # Widgets
+        layout.children[5] = row(widgetbox(CountryEMP, title_name_emp, title_name_gva), widgetbox(fontSET, min_yearSET, max_yearSET))
+        # Plot
+        layout.children[6] = Tabs(tabs=[Panel(child=create_figure_emp(), title='Employment'), Panel(child=create_figure_gva(), title='Gross Value Added')])
 
 
 def update_plot_TAX():
-	# Generate the Area Chart - Tax Revenue
-	print('here - tax')
-	if Plot_TAX.active==0:
-		# Text heading
-		print('Tax')
-		layout.children[4] = row(Div(text=open(join(dirname(__file__), 'tops', 'intro_areataxrc.html')).read(), width=900))
-		# Widgets
-		layout.children[4] = column(Div(text=open(join(dirname(__file__), 'tops', 'nodata.html')).read(), width=900), widgetbox(CountrySTRUC))
-		layout.children[5] = empty
-		layout.children[4] = Tabs(tabs=[Panel(child=create_figure_tax_nonrc(), title='Resource Revenue Within'), Panel(child=create_figure_tax_rc(), title='Resource Revenue Disaggregated')])
-		# if data exist, replace the empty plot
-		layout.children[5] = column(widgetbox(CountryTAX, tax_nonrc_title, tax_rc_title, min_year_taxrc, max_year_taxrc, fontrc), widgetbox(Button(label="Download - Resource Dissagregated", button_type="success", callback = CustomJS(args=dict(source=update_taxdatarc()), code=open(join(dirname(__file__), 'models', "download_taxdatarc.js")).read())), DataTable(source=update_taxdatarc(), columns=columns_taxdatarc, width=900, fit_columns=False)), widgetbox(Button(label="Download - Resource Revenue Within", button_type="success", callback = CustomJS(args=dict(source=update_taxdata_nonrc()), code=open(join(dirname(__file__), 'models', "download_taxdata_nonrc.js")).read())), DataTable(source=update_taxdata_nonrc(), columns=columns_tax_nonrc, width=900, fit_columns=False)))
-	else:
-		print('why')
+    # Generate the Area Chart - Tax Revenue
+
+    if Plot_TAX.active==0:
+        # Text heading
+
+        layout.children[4] = row(Div(text=open(join(dirname(__file__), 'tops', 'intro_areataxrc.html')).read(), width=900))
+        # Widgets
+        layout.children[4] = column(Div(text=open(join(dirname(__file__), 'tops', 'nodata.html')).read(), width=900), widgetbox(CountrySTRUC))
+        layout.children[5] = empty
+        layout.children[4] = Tabs(tabs=[Panel(child=create_figure_tax_nonrc(), title='Resource Revenue Within'), Panel(child=create_figure_tax_rc(), title='Resource Revenue Disaggregated')])
+        # if data exist, replace the empty plot
+        layout.children[5] = column(widgetbox(CountryTAX, tax_nonrc_title, tax_rc_title, min_year_taxrc, max_year_taxrc, fontrc), widgetbox(Button(label="Download - Resource Dissagregated", button_type="success", callback = CustomJS(args=dict(source=update_taxdatarc()), code=open(join(dirname(__file__), 'models', "download_taxdatarc.js")).read())), DataTable(source=update_taxdatarc(), columns=columns_taxdatarc, width=900, fit_columns=False)), widgetbox(Button(label="Download - Resource Revenue Within", button_type="success", callback = CustomJS(args=dict(source=update_taxdata_nonrc()), code=open(join(dirname(__file__), 'models', "download_taxdata_nonrc.js")).read())), DataTable(source=update_taxdata_nonrc(), columns=columns_tax_nonrc, width=900, fit_columns=False)))
+    else:
+        print('why')
 
 
 def update_plot_FIRM():
-	# no plots
-	if Plot_FIRM.active==0:
+    # no plots
+    if Plot_FIRM.active==0:
 
-		# Appologies for not plot, else blanks
-		layout.children[4] = Div(text=open(join(dirname(__file__), 'tops', 'intro_sorry.html')).read(), width=900)
-		layout.children[5] = widgetbox()
-		layout.children[6] = widgetbox()
+        # Appologies for not plot, else blanks
+        layout.children[4] = row(Div(text=open(join(dirname(__file__), 'tops', 'intro_firm.html')).read(), width=900))
+        layout.children[5] = widgetbox() #row(widgetbox(Enterprise_countries, title_tfp, font_tfp), create_figure_tfp())
+        layout.children[6] = widgetbox()
 
 ############################
 ### Trade
 
 
 def update_plot_TRADE():
-	# Default is the no plots
-	if Plot_TRADE.active==0:
-		# Appologies for not plot, else blanks
-		layout.children[4] = Div(text=open(join(dirname(__file__), 'tops', 'intro_TRADE.html')).read(), width=900)
-		layout.children[5] = row(widgetbox(CountryTRADE,min_yearTRADE, max_yearTRADE, exportarea_title, font_TRADE, note_TRADE), create_figure_trade())
-		layout.children[6] = row(widgetbox(Button(label="Download Data", button_type="success", callback = CustomJS(args=dict(source=update_tradedata()), code=open(join(dirname(__file__), 'models', "download_tradedata.js")).read())), DataTable(source=update_tradedata(), columns=columns_tradedata, width=900, fit_columns=False)))
+    # Default is the no plots
+    if Plot_TRADE.active==0:
+        # Appologies for not plot, else blanks
+        layout.children[4] = row(Div(text=open(join(dirname(__file__), 'tops', 'intro_TRADE.html')).read(), width=900))
+        layout.children[5] = row(widgetbox(CountryTRADE,min_yearTRADE, max_yearTRADE, exportarea_title, font_TRADE, note_TRADE), create_figure_trade())
+        layout.children[6] = row(widgetbox(Button(label="Download Data", button_type="success", callback = CustomJS(args=dict(source=update_tradedata()), code=open(join(dirname(__file__), 'models', "download_tradedata.js")).read())), DataTable(source=update_tradedata(), columns=columns_tradedata, width=900, fit_columns=False)))
 
-	else:
-		print('why')
+    else:
+        print('why')
 
 
 def update_plot_LP():
-	# Generate the Area Chart when selected
-	if Plot_LP.active==0:
-		# Text heading
-		layout.children[4] = Div(text=open(join(dirname(__file__), 'tops', 'intro_LP.html')).read(), width=900)	# Widgets
-		layout.children[5] = row(widgetbox(LPcountries, LP_var, minyear_LP, maxyear_LP, group_yearsLP, bar_widthLP, title_LP, font_LP, note_LP), create_figure_withinbtw())
-		# Plot
-		layout.children[6] =  widgetbox() #row(widgetbox(LP_var, minyear_LP, maxyear_LP, group_years, bar_width, order_bar, title_LP, font_LP, note_LP, note_LP2, legend_location_LP, legend_location_ori_LP), widgetbox(button_withbtwLP, DataTable(source=update_table_withbtw(), columns=columns, width=800, fit_columns=False)))
-		# The heading stays the same
-	elif Plot_LP.active==1:
+    # Generate the Area Chart when selected
+    if Plot_LP.active==0:
+        # Text heading
+        layout.children[4] = row(Div(text=open(join(dirname(__file__), 'tops', 'intro_LP.html')).read(), width=900))  # Widgets
+        layout.children[5] = row(widgetbox(LPcountries, LP_var, minyear_LP, maxyear_LP, group_yearsLP, bar_widthLP, title_LP, font_LP, note_LP), create_figure_withinbtw())
+        # Plot
+        if len(set(group_list)-set(LPcountries.value))!=len(group_list):
+            layout.children[6] =  column(Div(text=open(join(dirname(__file__), 'tops', 'intro_DATA_LP.html')).read(), width=900),
+                                        Div(text=open(join(dirname(__file__), 'tops', 'intro_DATA_Group.html')).read(), width=900))
+        else:
+            layout.children[6] =  row(Div(text=open(join(dirname(__file__), 'tops', 'intro_DATA_LP.html')).read(), width=900))    # Widgetswidgetbox() #row(widgetbox(LP_var, minyear_LP, maxyear_LP, group_years, bar_width, order_bar, title_LP, font_LP, note_LP, note_LP2, legend_location_LP, legend_location_ori_LP), widgetbox(button_withbtwLP, DataTable(source=update_table_withbtw(), columns=columns, width=800, fit_columns=False)))
 
-		layout.children[4] = Div(text=open(join(dirname(__file__), 'tops', 'intro_LP_annualised.html')).read(), width=900)		# Plot and Widgits (row)
-		layout.children[5] = row(widgetbox(CountryLP, LP_variables, minyear_LP, maxyear_LP, group_yearsLP, order_barLP, title_LP, font_LP, bar_widthLP,  note_LP), create_figure_annualLP())
-		# Blank widgit bx
-		layout.children[6] = widgetbox() #row(widgetbox(button_annualLP, DataTable(source=update_table_annual(), columns=columns, width=650, fit_columns=False)))
+        # The heading stays the same
+    elif Plot_LP.active==1:
+
+        layout.children[4] = row(Div(text=open(join(dirname(__file__), 'tops', 'intro_LP_annualised.html')).read(), width=900) )       # Plot and Widgits (row)
+        layout.children[5] = row(widgetbox(CountryLP, LP_variables, minyear_LP, maxyear_LP, group_yearsLP, order_barLP, title_LP, font_LP, bar_widthLP,  note_LP), create_figure_annualLP())
+        # Blank widgit bx
+        layout.children[6] = widgetbox() #row(widgetbox(button_annualLP, DataTable(source=update_table_annual(), columns=columns, width=650, fit_columns=False)))
 
 def update_plot_STRUC():
 
-	print('STRUC')
-	if  Plot_STRUC.active==1:
-		# The heading stays the same
+    print('STRUC')
+    if  Plot_STRUC.active==1:
+        # The heading stays the same
 
-		layout.children[4] = row(Div(text=open(join(dirname(__file__), 'tops', 'intro_relemp.html')).read(), width=900))
-		# Plot and Widgits (row)
-		layout.children[5] = row(widgetbox(CountrySTRUC, minavyear, maxavyear, mining, title_relemp, font_relemp, note_relemp), create_figure_relemp())
-		# Blank widgit box
-		layout.children[6] = row(widgetbox(Button(label="Download Data", button_type="success", callback = CustomJS(args=dict(source=select_obs_relemp()), code=open(join(dirname(__file__), 'models', "download_relemp.js")).read())), DataTable(source=select_obs_relemp(), columns=columns_relemp, width=900, fit_columns=False)))
+        layout.children[4] = row(Div(text=open(join(dirname(__file__), 'tops', 'intro_relemp.html')).read(), width=900))
+        # Plot and Widgits (row)
+        layout.children[5] = row(widgetbox(CountrySTRUC, minavyear, maxavyear, mining, title_relemp, font_relemp, note_relemp), create_figure_relemp())
+        # Blank widgit box
+        layout.children[6] = row(widgetbox(Button(label="Download Data", button_type="success", callback = CustomJS(args=dict(source=select_obs_relemp()), code=open(join(dirname(__file__), 'models', "download_relemp.js")).read())), DataTable(source=select_obs_relemp(), columns=columns_relemp, width=900,height=250, fit_columns=False)))
 
-	elif  Plot_STRUC.active==0:
-		# The heading stays the same
+    elif  Plot_STRUC.active==0:
+        # The heading stays the same
 
-		layout.children[4] = row(Div(text=open(join(dirname(__file__), 'tops', 'intro_relbar.html')).read(), width=900))
-		# Plot and Widgits (row)
-		layout.children[5] = row(widgetbox(CountrySTRUC, relyear,mining, title_relbar, font_relbar, note_relbar), create_figure_relbar())
-		# Blank widgit box
-		layout.children[6] = widgetbox() #row(widgetbox(Button(label="Download Data", button_type="success", callback = CustomJS(args=dict(source=select_obs_relemp()), code=open(join(dirname(__file__), 'models', "download_relemp.js")).read())), DataTable(source=select_obs_relemp(), columns=columns_relemp, width=900, fit_columns=False)))
+        layout.children[4] = row(Div(text=open(join(dirname(__file__), 'tops', 'intro_relbar.html')).read(), width=900))
+        # Plot and Widgits (row)
+        layout.children[5] = row(widgetbox(CountrySTRUC, relyear,mining, title_relbar, font_relbar, note_relbar), create_figure_relbar())
+        # Blank widgit box
+        layout.children[6] = widgetbox() #row(widgetbox(Button(label="Download Data", button_type="success", callback = CustomJS(args=dict(source=select_obs_relemp()), code=open(join(dirname(__file__), 'models', "download_relemp.js")).read())), DataTable(source=select_obs_relemp(), columns=columns_relemp, width=900, fit_columns=False)))
 
 
 
-	else:
-		print('I wonder why')
+    else:
+        print('I wonder why')
 
 
 #############################
 ### Cross-sectional
 
 def update_plot_CROSS():
-	# Default is the Scatter
-	if Plot_CROSS.active==4:
-		# Scatter heading
-		layout.children[4] = Div(text=open(join(dirname(__file__), 'tops', 'intro_scatter.html')).read(), width=900)
-		# Widgit box and scatter plot
-		layout.children[5] = column(widgetbox(x_axis, y_axis), row(widgetbox(minyear, maxyear, GDP, title_name, font_scatter, button), t))
-		# blank
-		layout.children[6] = widgetbox()
+    # Default is the Scatter
+    if Plot_CROSS.active==4:
+        # Scatter heading
+        layout.children[4] = row(Div(text=open(join(dirname(__file__), 'tops', 'intro_scatter.html')).read(), width=900))
+        # Widgit box and scatter plot
+        layout.children[5] = column(widgetbox(x_axis, y_axis), row(widgetbox(minyear, maxyear, GDP, title_name, font_scatter, button), create_figure_scatter()))
+        # blank
+        layout.children[6] = widgetbox()
 
-	elif Plot_CROSS.active==3:
-		# Scatter heading
-		layout.children[4] = Div(text=open(join(dirname(__file__), 'tops', 'intro_line.html')).read(), width=900)
-		# Widgit box and scatter plot
-		layout.children[5] = column(widgetbox(line_var), row(widgetbox(linecross_scatter, countries, minyear_linecross, maxyear_linecross, rolling_linecross, title_linecross, font_linecross,legend_location_linecross, legend_location_ori_linecross, note_linecross ), create_figure_linecross()))
-		# blank
-		layout.children[6] = widgetbox(Button(label="Download Data", button_type="success", callback = CustomJS(args=dict(source=update_linecrossdata()),
+    elif Plot_CROSS.active==3:
+        # Scatter heading
+        layout.children[4] = row(Div(text=open(join(dirname(__file__), 'tops', 'intro_line.html')).read(), width=900))
+        # Widgit box and scatter plot
+        layout.children[5] = column(widgetbox(line_var), row(widgetbox(linecross_scatter, countries, minyear_linecross, maxyear_linecross, rolling_linecross, title_linecross, font_linecross,legend_location_linecross, legend_location_ori_linecross, note_linecross ), create_figure_linecross()))
+        # blank
+        layout.children[6] = widgetbox(Button(label="Download Data", button_type="success", callback = CustomJS(args=dict(source=update_linecrossdata()),
                                    code=open(join(dirname(__file__), 'models', "download_linecross.js")).read())), DataTable(source=update_linecrossdata(), columns=columns_linescross, width=900, fit_columns=False))
 
-	elif Plot_CROSS.active==1:
-		# Scatter heading
-		layout.children[4] = Div(text=open(join(dirname(__file__), 'tops', 'intro_arealine.html')).read(), width=900)
-		# Widgit box and scatter plot
-		if boxplot_options.active==0:
-		          layout.children[5] = column(boxplot_var, row(widgetbox(boxplot_options, GroupSelect, minyear_boxplot, maxyear_boxplot, bar_order, title_boxplot, font_boxplot, note_boxplot), create_figure_boxplot()))
-		elif boxplot_options.active==1:
-		        layout.children[5] = column(boxplot_var, row(widgetbox(boxplot_options, countries, minyear_boxplot, maxyear_boxplot, bar_order, title_boxplot, font_boxplot, note_boxplot), create_figure_boxplot()))
-		layout.children[6] = widgetbox()
+    elif Plot_CROSS.active==1:
+        # Scatter heading
+        layout.children[4] = row(Div(text=open(join(dirname(__file__), 'tops', 'intro_arealine.html')).read(), width=900))
+        # Widgit box and scatter plot
+        if boxplot_options.active==0:
+                  layout.children[5] = column(boxplot_var, row(widgetbox(boxplot_options, GroupSelect, minyear_boxplot, maxyear_boxplot, bar_order, title_boxplot, font_boxplot, note_boxplot), create_figure_boxplot()))
+        elif boxplot_options.active==1:
+                layout.children[5] = column(boxplot_var, row(widgetbox(boxplot_options, countries, minyear_boxplot, maxyear_boxplot, bar_order, title_boxplot, font_boxplot, note_boxplot), create_figure_boxplot()))
+        layout.children[6] = widgetbox()
 
         #layout.children[4] = widgetbox(Button(label="Download Data", button_type="success", callback = CustomJS(args=dict(source=update_areacrossdata()),
                             #code=open(join(dirname(__file__), 'models', "download_linecross.js")).read())), DataTable(source=update_areacrossdata(), columns=columns_areacross, width=900, fit_columns=False))
-	elif Plot_CROSS.active==0:
-		# Scatter heading
-		layout.children[4] = Div(text=open(join(dirname(__file__), 'tops', 'intro_bar_chart.html')).read(), width=900)
-		# Widgit box and scatter plot
-		if bar_plot_options.active==0:
-			layout.children[5] = column(bar_cross_var, row(widgetbox(bar_plot_options, countries, bar_order, minyear_bar_cross, maxyear_bar_cross, title_bar_cross, font_bar_cross, bar_height, round_bar_cross, note_bar_cross ), create_figure_bar_cross()))
-		elif bar_plot_options.active==1:
-			layout.children[5] = column(bar_cross_var, row(widgetbox(bar_plot_options, countries, group_years, minyear_bar_cross, maxyear_bar_cross, title_bar_cross, font_bar_cross, bar_width, legend_location_ori_bar_cross, legend_location_bar_cross, note_bar_cross), create_figure_bar_cross()))
-		elif bar_plot_options.active==2:
-			layout.children[5] = column(bar_cross_var, row(widgetbox(bar_plot_options, countries, group_years, minyear_bar_cross, maxyear_bar_cross, title_bar_cross, font_bar_cross, bar_width, legend_location_ori_bar_cross, legend_location_bar_cross, note_bar_cross), create_figure_bar_cross()))
+    elif Plot_CROSS.active==0:
+        # Scatter heading
+        layout.children[4] = row(Div(text=open(join(dirname(__file__), 'tops', 'intro_bar_chart.html')).read(), width=900))
+        # Widgit box and scatter plot
+        if bar_plot_options.active==0:
+            layout.children[5] = column(bar_cross_var, row(widgetbox(bar_plot_options, countries, bar_order, minyear_bar_cross, maxyear_bar_cross, title_bar_cross, font_bar_cross, bar_height, round_bar_cross, note_bar_cross ), create_figure_bar_cross()))
+        elif bar_plot_options.active==1:
+            layout.children[5] = column(bar_cross_var, row(widgetbox(bar_plot_options, countries, group_years, minyear_bar_cross, maxyear_bar_cross, title_bar_cross, font_bar_cross, bar_width, legend_location_ori_bar_cross, legend_location_bar_cross, note_bar_cross), create_figure_bar_cross()))
+        elif bar_plot_options.active==2:
+            layout.children[5] = column(bar_cross_var, row(widgetbox(bar_plot_options, countries, group_years, minyear_bar_cross, maxyear_bar_cross, title_bar_cross, font_bar_cross, bar_width, legend_location_ori_bar_cross, legend_location_bar_cross, note_bar_cross), create_figure_bar_cross()))
 
-		layout.children[6] = widgetbox()
+        layout.children[6] = widgetbox()
 
-	elif Plot_CROSS.active==2:
-		# Scatter heading
-		layout.children[4] = Div(text=open(join(dirname(__file__), 'tops', 'intro_success.html')).read(), width=900)
-		# Widgit box and scatter plot
-		layout.children[5] = widgetbox()
-		layout.children[6] = widgetbox()
+    elif Plot_CROSS.active==2:
+        # Scatter heading
+        layout.children[4] = row(Div(text=open(join(dirname(__file__), 'tops', 'intro_success.html')).read(), width=900))
+        # Widgit box and scatter plot
+        layout.children[5] = widgetbox()
+        layout.children[6] = widgetbox()
 
-		layout.children[5] = row(create_figure_heatmap(), column(widgetbox(controls_heatmap), Button(label="Download Successful Cases", button_type="success", callback=CustomJS(args=dict(source=update_data_heatmap()),
+        layout.children[5] = row(create_figure_heatmap(), column(widgetbox(controls_heatmap), Button(label="Download Successful Cases", button_type="success", callback=CustomJS(args=dict(source=update_data_heatmap()),
                                    code=open(join(dirname(__file__), 'models', 'download_heatmap.js')).read()))))
 
-	else:
-		print('What the hell')
+    else:
+        print('What the hell')
 
 
 
@@ -3592,7 +3796,7 @@ for control in controls_TRADE:
 # Generate callbacks for the scatter plot
 controls_scatter = [x_axis, y_axis, minyear, maxyear, GDP, title_name, font_scatter ]
 for control in controls_scatter:
-    control.on_change('value', lambda attr, old, new: update_sc())
+    control.on_change('value', lambda attr, old, new: update_plot_CROSS())
 
 controls_linecross = [countries, line_var, minyear_linecross,rolling_linecross,  legend_location_linecross, legend_location_ori_linecross,  note_linecross, title_linecross, font_linecross]
 for control in controls_linecross:
@@ -3621,6 +3825,11 @@ controls_heatmap= [indicator_options, T_choice, minyear_heatmap, maxyear_heatmap
 for control in controls_heatmap:
     control.on_change('value',  lambda attr, old, new: update_plot_CROSS())
 
+######## tfp widgets
+controls_tfp= [Enterprise_countries, title_tfp, font_tfp]
+# Generate Widgets for the Table
+for control in controls_tfp:
+    control.on_change('value',  lambda attr, old, new: update_plot_FIRM())
 
 #####################################################################
 #####################################################################
